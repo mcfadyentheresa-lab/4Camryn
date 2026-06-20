@@ -1,0 +1,138 @@
+@import url('https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&f[]=zodiak@400,700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* ── Base surfaces — cool, airy, near-white ── */
+  --bg: #f5f9fb;
+  --paper: #ffffff;
+  --ink: #131c22;
+  --ink-2: #2e3f4a;
+  --muted: #7a9099;
+  --line: #dde8ed;
+  --soft: #eaf3f7;
+
+  /* ── Named design tokens ──────────────────── */
+
+  /* Card tint: very light sky-blue-white (replaces warm cream) */
+  --camryn-bg-card: #eaf5f9;
+  --camryn-bg-card-border: #cfe6ee;
+
+  /* Primary accent: fresh sky/water blue — CTAs, active states */
+  --camryn-accent-coral: #2e9bbf;
+  --camryn-accent-coral-2: #55b5d4;
+  --camryn-accent-coral-soft: #e0f4fb;
+  --camryn-accent-coral-deep: #1f7a99;
+
+  /* Cycle / seafoam — body and cycle rhythm (kept, slightly brighter) */
+  --camryn-cycle-mint: #1e9e87;
+  --camryn-cycle-mint-bg: #dff5f0;
+  --camryn-cycle-mint-deep: #157060;
+
+  /* Hydration aqua — progress dots on morning hydration row */
+  --camryn-hydration-accent: #3bb5d0;
+
+  /* Text */
+  --camryn-text-main: #131c22;
+  --camryn-text-soft: #7a9099;
+
+  /* Quote block — deep ocean instead of near-black warm */
+  --camryn-bg-quote: #0e2530;
+
+  /* Phase colors */
+  --phase-1: #2e9bbf;
+  --phase-1-soft: #e0f4fb;
+  --phase-1-track: #b8e2f0;
+  --phase-2: #d4813a;
+  --phase-2-soft: #fdf0e6;
+  --phase-2-track: #f0cfa8;
+  --phase-3: #2a9d6f;
+  --phase-3-soft: #e2f5ed;
+  --phase-3-track: #a8dfc6;
+  --phase-4: #7b6fa0;
+  --phase-4-soft: #eeebf7;
+  --phase-4-track: #cdc7e8;
+  --phase-5: #b05070;
+  --phase-5-soft: #faedf1;
+  --phase-5-track: #e8b8c8;
+  --phase-6: #c08030;
+  --phase-6-soft: #fdf3e0;
+  --phase-6-track: #f0d4a0;
+
+  /* Legacy aliases */
+  --accent: var(--camryn-accent-coral);
+  --accent-2: var(--camryn-accent-coral-2);
+  --accent-soft: var(--camryn-accent-coral-soft);
+  --accent-muted: var(--camryn-accent-coral-deep);
+  --teal: var(--camryn-cycle-mint);
+  --teal-soft: var(--camryn-cycle-mint-bg);
+  --sand: var(--camryn-bg-card);
+  --sand-dark: var(--camryn-bg-card-border);
+
+  --font-body: 'Satoshi', system-ui, sans-serif;
+  --font-display: 'Zodiak', Georgia, serif;
+  --r: 18px;
+  --r-sm: 12px;
+  --shadow: 0 1px 3px rgba(13,28,38,0.06), 0 4px 16px rgba(13,28,38,0.04);
+  --shadow-hover: 0 2px 8px rgba(13,28,38,0.08), 0 8px 28px rgba(13,28,38,0.08);
+
+  color-scheme: light;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+[data-theme='dark'] {
+  --bg: #0d1a20;
+  --paper: #111f27;
+  --ink: #e8f2f6;
+  --ink-2: #b0ccd5;
+  --muted: #6a8a96;
+  --line: #1e3040;
+  --soft: #162530;
+  --shadow: 0 1px 3px rgba(0,0,0,0.25), 0 4px 16px rgba(0,0,0,0.18);
+  --shadow-hover: 0 2px 8px rgba(0,0,0,0.3), 0 8px 28px rgba(0,0,0,0.22);
+
+  --camryn-bg-card: #162530;
+  --camryn-bg-card-border: #1e3340;
+  --camryn-accent-coral: #3db5d8;
+  --camryn-accent-coral-2: #60c8e6;
+  --camryn-accent-coral-soft: #0d2a36;
+  --camryn-accent-coral-deep: #5ccae8;
+  --camryn-cycle-mint: #2ebfa6;
+  --camryn-cycle-mint-bg: #0d2820;
+  --camryn-cycle-mint-deep: #23977f;
+  --camryn-hydration-accent: #45c5de;
+  --camryn-text-main: #e8f2f6;
+  --camryn-text-soft: #6a8a96;
+  --camryn-bg-quote: #071318;
+
+  --accent: var(--camryn-accent-coral);
+  --accent-2: var(--camryn-accent-coral-2);
+  --accent-soft: var(--camryn-accent-coral-soft);
+  --accent-muted: var(--camryn-accent-coral-deep);
+  --teal: var(--camryn-cycle-mint);
+  --teal-soft: var(--camryn-cycle-mint-bg);
+  --sand: var(--camryn-bg-card);
+  --sand-dark: var(--camryn-bg-card-border);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--ink);
+  line-height: 1.5;
+}
+
+button, input, textarea, select {
+  font: inherit;
+  color: inherit;
+}
+
+button { cursor: pointer; }
+#root { min-height: 100vh; }
