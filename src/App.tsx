@@ -21,7 +21,6 @@ import OnboardingFlow from './components/OnboardingFlow';
 import DailyCheckinModal, { shouldShowCheckin } from './components/DailyCheckinModal';
 import PhaseGraduationModal from './components/PhaseGraduationModal';
 import ProtocolComplete from './components/ProtocolComplete';
-import CamrynOrb from './components/ui/CamrynOrb';
 import NotificationBanner from './components/NotificationBanner';
 import MorningNudgePrompt from './components/MorningNudgePrompt';
 import './App.css';
@@ -151,26 +150,54 @@ function App() {
   }, [session?.current_phase, session?.energy, session?.stress, session?.cycle_phase_name]);
 
   useEffect(() => {
-    const checkAuth = async () => {
+    const autoSignIn = async () => {
       const { data: { session: authSession } } = await supabase.auth.getSession();
-      setUser(authSession?.user || null);
-      setLoading(false);
-
       if (authSession?.user) {
+        setUser(authSession.user);
+        setLoading(false);
         loadSession(authSession.user.id);
+        return;
+      }
+
+      // Try anonymous sign-in first (requires it to be enabled in Supabase dashboard)
+      const { data: anonData } = await supabase.auth.signInAnonymously();
+      if (anonData?.user) {
+        setUser(anonData.user);
+        setLoading(false);
+        loadSession(anonData.user.id);
+        return;
+      }
+
+      // Fallback: device-bound account stored in localStorage
+      const DEVICE_KEY = 'camryn_device_id';
+      let deviceId = localStorage.getItem(DEVICE_KEY);
+      if (!deviceId) {
+        deviceId = crypto.randomUUID();
+        localStorage.setItem(DEVICE_KEY, deviceId);
+      }
+      const email = `device-${deviceId}@camryn.app`;
+      const password = `C${deviceId.replace(/-/g, '')}!`;
+
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (!signInError && signInData.user) {
+        setUser(signInData.user);
+        setLoading(false);
+        loadSession(signInData.user.id);
+        return;
+      }
+
+      // Account doesn't exist yet — create it
+      const { data: signUpData } = await supabase.auth.signUp({ email, password });
+      if (signUpData?.user) {
+        setUser(signUpData.user);
+        setLoading(false);
+        loadSession(signUpData.user.id);
+      } else {
+        setLoading(false);
       }
     };
 
-    checkAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, authSession) => {
-      setUser(authSession?.user || null);
-      if (authSession?.user) {
-        loadSession(authSession.user.id);
-      }
-    });
-
-    return () => subscription?.unsubscribe();
+    autoSignIn();
   }, []);
 
   const loadSession = async (userId: string) => {
@@ -524,10 +551,6 @@ function App() {
     return <div style={{ padding: '20px', textAlign: 'center' }}>Loading...</div>;
   }
 
-  if (!user) {
-    return <AuthPrompt />;
-  }
-
   if (!session) {
     return <div style={{ padding: '20px', textAlign: 'center' }}>Initializing...</div>;
   }
@@ -591,10 +614,7 @@ function App() {
           onThemeToggle={() => setTheme(theme === 'light' ? 'dark' : 'light')}
           saveStatus={saveStatus}
           syncDot={syncDot}
-          onSignOut={() => {
-            supabase.auth.signOut();
-            setUser(null);
-          }}
+          onSignOut={() => { /* no-op: no login page */ }}
           view={view}
           onViewChange={handleViewChange}
           currentPhase={session.current_phase}
@@ -697,159 +717,5 @@ function App() {
   );
 }
 
-
-function AuthPrompt() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  const handleAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-
-    try {
-      if (isSignUp) {
-        const { data, error } = await supabase.auth.signUp({ email, password });
-        if (error) throw error;
-        // Store the name in the session after sign-up creates it
-        if (data.user && name.trim()) {
-          // Session row is created by loadSession; store name in user metadata for now
-          await supabase.auth.updateUser({ data: { display_name: name.trim() } });
-        }
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-      }
-    } catch (err: any) {
-      setError(err.message);
-    }
-    setLoading(false);
-  };
-
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    padding: '10px 12px',
-    border: '1px solid var(--line)',
-    borderRadius: '12px',
-    background: 'transparent',
-    fontSize: '0.95rem',
-    outline: 'none',
-    boxSizing: 'border-box',
-  };
-
-  const labelStyle: React.CSSProperties = {
-    display: 'block',
-    marginBottom: '6px',
-    fontSize: '0.88rem',
-    color: 'var(--muted)',
-  };
-
-  return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'var(--bg)',
-        padding: '20px',
-      }}
-    >
-      <div style={{ maxWidth: '400px', width: '100%' }}>
-        <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-          <div style={{ margin: '0 auto 14px', width: 56, height: 56 }}>
-            <CamrynOrb size={56} />
-          </div>
-          <h1 style={{ margin: '0 0 8px', fontSize: '2rem', fontFamily: 'var(--font-display)' }}>
-            Camryn
-          </h1>
-          <p style={{ margin: '0', color: 'var(--muted)', fontSize: '0.95rem' }}>
-            Daily wellness protocol
-          </p>
-        </div>
-
-        <form onSubmit={handleAuth} style={{ display: 'grid', gap: '12px' }}>
-          {isSignUp && (
-            <div>
-              <label style={labelStyle}>Your first name</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                style={inputStyle}
-                placeholder="e.g. Jess"
-                maxLength={40}
-              />
-            </div>
-          )}
-          <div>
-            <label style={labelStyle}>Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              style={inputStyle}
-              required
-            />
-          </div>
-          <div>
-            <label style={labelStyle}>Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              style={inputStyle}
-              required
-            />
-          </div>
-
-          {error && (
-            <div style={{ padding: '10px', background: 'var(--accent-soft)', color: 'var(--accent)', borderRadius: '8px', fontSize: '0.9rem' }}>
-              {error}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              padding: '10px',
-              border: '1px solid var(--ink)',
-              borderRadius: '999px',
-              background: 'transparent',
-              color: 'var(--ink)',
-              fontWeight: 700,
-              cursor: 'pointer',
-              marginTop: '8px',
-            }}
-          >
-            {loading ? 'Loading...' : isSignUp ? 'Create account' : 'Sign in'}
-          </button>
-        </form>
-
-        <div style={{ textAlign: 'center', marginTop: '16px' }}>
-          <button
-            type="button"
-            onClick={() => { setIsSignUp(!isSignUp); setError(''); }}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--muted)',
-              cursor: 'pointer',
-              fontSize: '0.9rem',
-              textDecoration: 'underline',
-            }}
-          >
-            {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default App;
