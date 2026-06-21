@@ -106,7 +106,7 @@ export const PROTOCOL = {
       modules: [
         {
           title: 'Identity Architecture',
-          why: 'Identity change is more durable than willpower. You are consolidating a new self-concept built on the evidence of the past 22 weeks.',
+          why: 'Identity change is more durable than willpower. You are consolidating a new self-concept built on the evidence of the past 52 weeks.',
           actions: ['Journal your transformation evidence weekly', 'Articulate your identity in one sentence', 'Notice old vs new default responses'],
         },
         {

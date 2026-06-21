@@ -362,7 +362,7 @@ export default function ProtocolModal({ onClose, currentPhase }: ProtocolModalPr
           <div>
             <h3 className="modal-title">The Camryn Protocol</h3>
             <p className="modal-subtitle">
-              A 22-week body and lifestyle transformation built around phases, cycle awareness, and daily habits that compound.
+              A 52-week body and lifestyle transformation built around phases, cycle awareness, and daily habits that compound.
             </p>
           </div>
           <button className="modal-close" onClick={onClose} aria-label="Close">✕</button>

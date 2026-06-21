@@ -28,7 +28,7 @@ export default function ProtocolComplete({ displayName, completedAt, onMaintain,
             <CamrynOrb size={68} />
             <div className="pc-orb-ring" />
           </div>
-          <div className="pc-badge">22-week protocol complete</div>
+          <div className="pc-badge">52-week protocol complete</div>
           <h1 className="pc-headline">
             {displayName ? `${displayName}, you built it.` : 'You built it.'}
           </h1>
@@ -93,7 +93,7 @@ export default function ProtocolComplete({ displayName, completedAt, onMaintain,
               </div>
               <div className="pc-choice-text">
                 <div className="pc-choice-title">Run it again</div>
-                <div className="pc-choice-desc">Reset mastery tracking and run the full 22-week protocol from Phase 1. All your historical data stays. A second run compounds on what you already built.</div>
+                <div className="pc-choice-desc">Reset mastery tracking and run the full 52-week protocol from Phase 1. All your historical data stays. A second run compounds on what you already built.</div>
               </div>
             </button>
           </div>
