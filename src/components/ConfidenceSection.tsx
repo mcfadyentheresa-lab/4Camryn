@@ -3,6 +3,171 @@ import { supabase } from '../lib/supabase';
 import { useSaveIndicator } from '../hooks/useSaveIndicator';
 import SaveIndicator from './ui/SaveIndicator';
 
+// ── Likes ─────────────────────────────────────────────────────────────────────
+interface Like {
+  id: string;
+  title: string;
+  category: string;
+  note: string;
+  url: string;
+  created_at: string;
+}
+
+const LIKE_CATEGORIES = ['Clothing', 'Tea', 'Skincare', 'Food', 'Other'] as const;
+type LikeCategory = typeof LIKE_CATEGORIES[number];
+
+const CATEGORY_EMOJI: Record<string, string> = {
+  Clothing: '👗',
+  Tea: '🍵',
+  Skincare: '✨',
+  Food: '🥗',
+  Other: '♡',
+};
+
+function LikesCard({ userId }: { userId: string }) {
+  const [likes, setLikes] = useState<Like[]>([]);
+  const [open, setOpen] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState({ title: '', category: 'Other' as LikeCategory, note: '', url: '' });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    supabase
+      .from('camryn_likes')
+      .select('id, title, category, note, url, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => { if (data) setLikes(data as Like[]); });
+  }, [userId, open]);
+
+  const handleAdd = async () => {
+    if (!draft.title.trim()) return;
+    setSaving(true);
+    const { data } = await supabase
+      .from('camryn_likes')
+      .insert({ user_id: userId, title: draft.title.trim(), category: draft.category, note: draft.note.trim(), url: draft.url.trim() })
+      .select()
+      .maybeSingle();
+    if (data) setLikes((prev) => [data as Like, ...prev]);
+    setDraft({ title: '', category: 'Other', note: '', url: '' });
+    setAdding(false);
+    setSaving(false);
+  };
+
+  const handleDelete = async (id: string) => {
+    await supabase.from('camryn_likes').delete().eq('id', id);
+    setLikes((prev) => prev.filter((l) => l.id !== id));
+  };
+
+  return (
+    <div className="conf-card conf-likes-card">
+      <button className="conf-questions-toggle" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+        <div>
+          <h3 className="conf-card-title">Things I love</h3>
+          <p className="conf-card-intro">Save things that work for you — clothing, teas, finds.</p>
+        </div>
+        <div className={`conf-chevron ${open ? 'open' : ''}`}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M3 5L7 9L11 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+      </button>
+
+      {open && (
+        <div className="conf-likes-body">
+          {likes.length === 0 && !adding && (
+            <p className="conf-likes-empty">Nothing saved yet. Add the first thing you love.</p>
+          )}
+
+          <div className="conf-likes-list">
+            {likes.map((like) => (
+              <div key={like.id} className="conf-like-row">
+                <span className="conf-like-emoji">{CATEGORY_EMOJI[like.category] || '♡'}</span>
+                <div className="conf-like-content">
+                  <span className="conf-like-title">{like.title}</span>
+                  {like.note && <span className="conf-like-note">{like.note}</span>}
+                  <span className="conf-like-category">{like.category}</span>
+                </div>
+                <div className="conf-like-actions">
+                  {like.url && (
+                    <a
+                      href={like.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="conf-like-link"
+                      aria-label="Open link"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                        <path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M7 1h4v4M11 1 6 6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </a>
+                  )}
+                  <button className="conf-like-remove" onClick={() => handleDelete(like.id)} aria-label="Remove">
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                      <path d="M1 1l8 8M9 1 1 9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {adding ? (
+            <div className="conf-like-form">
+              <input
+                className="conf-like-input"
+                placeholder="What do you love?"
+                value={draft.title}
+                onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') setAdding(false); }}
+                autoFocus
+              />
+              <div className="conf-like-cats">
+                {LIKE_CATEGORIES.map((cat) => (
+                  <button
+                    key={cat}
+                    className={`conf-like-cat ${draft.category === cat ? 'active' : ''}`}
+                    onClick={() => setDraft((d) => ({ ...d, category: cat }))}
+                  >
+                    {CATEGORY_EMOJI[cat]} {cat}
+                  </button>
+                ))}
+              </div>
+              <input
+                className="conf-like-input"
+                placeholder="Short note (optional)"
+                value={draft.note}
+                onChange={(e) => setDraft((d) => ({ ...d, note: e.target.value }))}
+              />
+              <input
+                className="conf-like-input"
+                placeholder="Link (optional — for future affiliate use)"
+                value={draft.url}
+                onChange={(e) => setDraft((d) => ({ ...d, url: e.target.value }))}
+              />
+              <div className="conf-like-form-actions">
+                <button className="conf-like-save-btn" onClick={handleAdd} disabled={!draft.title.trim() || saving}>
+                  {saving ? 'Saving...' : 'Save'}
+                </button>
+                <button className="conf-like-cancel-btn" onClick={() => { setAdding(false); setDraft({ title: '', category: 'Other', note: '', url: '' }); }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button className="conf-like-add-btn" onClick={() => setAdding(true)}>
+              + Add something you love
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface DailyEntry {
   entry_date: string;
@@ -424,6 +589,9 @@ export default function ConfidenceSection({ userId }: ConfidenceSectionProps) {
           </div>
         )}
       </div>
+      {/* Things I Love */}
+      <LikesCard userId={userId} />
+
     </section>
   );
 }

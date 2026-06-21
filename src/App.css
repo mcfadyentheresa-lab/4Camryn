@@ -3581,6 +3581,210 @@ button.camryn-orb:focus-visible .camryn-orb-sphere {
   align-self: flex-end;
 }
 
+/* ── Things I Love ──────────────────────────────── */
+.conf-likes-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 8px;
+}
+
+.conf-likes-empty {
+  font-size: 0.82rem;
+  color: var(--muted);
+  text-align: center;
+  padding: 12px 0;
+}
+
+.conf-likes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.conf-like-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 10px;
+  background: var(--surface, var(--bg));
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.conf-like-emoji {
+  font-size: 1rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.conf-like-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.conf-like-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.3;
+}
+
+.conf-like-note {
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.conf-like-category {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.conf-like-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.conf-like-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  color: var(--accent);
+  background: transparent;
+  transition: background 0.15s;
+  text-decoration: none;
+}
+
+.conf-like-link:hover { background: var(--accent-soft, rgba(0,0,0,0.05)); }
+
+.conf-like-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.conf-like-remove:hover { background: var(--error-soft, #fee2e2); color: var(--error, #ef4444); }
+
+.conf-like-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background: var(--surface, var(--bg));
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.conf-like-input {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  font-family: var(--font-body);
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+
+.conf-like-input:focus { border-color: var(--accent); }
+.conf-like-input::placeholder { color: var(--muted); }
+
+.conf-like-cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.conf-like-cat {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--paper);
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.conf-like-cat.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.conf-like-form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.conf-like-save-btn {
+  flex: 1;
+  padding: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.conf-like-save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.conf-like-cancel-btn {
+  padding: 8px 14px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.conf-like-cancel-btn:hover { background: var(--bg); }
+
+.conf-like-add-btn {
+  width: 100%;
+  padding: 9px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--accent);
+  background: transparent;
+  border: 1.5px dashed var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.conf-like-add-btn:hover { background: var(--accent-soft, rgba(0,0,0,0.03)); border-color: var(--accent); }
+
 /* ── Body section ───────────────────────────────── */
 .body-section {
   display: flex;
