@@ -216,6 +216,16 @@ async function fetchRecentContext(userId: string, todayStr: string): Promise<str
   );
 }
 
+async function fetchLovesSnapshot(userId: string): Promise<{ category: string; title: string; note: string }[]> {
+  const { data } = await supabase
+    .from('camryn_likes')
+    .select('category, title, note')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(40);
+  return ((data ?? []) as { category: string; title: string; note: string }[]);
+}
+
 async function fetchReactionSummary(userId: string): Promise<{ helpful: number; not_quite: number; recentNotQuite: string[] }> {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - 14);
@@ -522,7 +532,7 @@ export default function JournalSection({ userId, session, focusInput, displayNam
 
     const phaseQuests: Quest[] = PHASE_QUESTS[session.current_phase] ?? FOUNDATION_QUESTS;
 
-    const [bodySnapshot, confidenceSnapshot, foodSnapshot, intentional, vitalsSnapshot, recentContext, reactionSummary] = await Promise.all([
+    const [bodySnapshot, confidenceSnapshot, foodSnapshot, intentional, vitalsSnapshot, recentContext, reactionSummary, lovesSnapshot] = await Promise.all([
       fetchBodySnapshot(userId),
       fetchConfidenceSnapshot(userId),
       fetchFoodSnapshot(userId),
@@ -530,6 +540,7 @@ export default function JournalSection({ userId, session, focusInput, displayNam
       fetchVitalsSnapshot(userId),
       fetchRecentContext(userId, today),
       fetchReactionSummary(userId),
+      fetchLovesSnapshot(userId),
     ]);
     const masterySnapshot = buildMasterySnapshot(session.current_phase);
     let pendingLinks: SharedLink[] = [];
@@ -564,11 +575,12 @@ export default function JournalSection({ userId, session, focusInput, displayNam
           hourOfDay,
           isNightMode,
           lastWinddown: morningWinddown,
-          phaseQuests: phaseQuests.map((q) => ({ id: q.id, title: q.title })),
+          phaseQuests: phaseQuests.map((q) => ({ id: q.id, title: q.title, description: q.description })),
           firstTask: history.length === 0 && firstTask ? firstTask : null,
           vitalsSnapshot: vitalsSnapshot ?? null,
           recentContext: recentContext.length > 0 ? recentContext : undefined,
           reactionSummary: (reactionSummary.helpful + reactionSummary.not_quite) > 0 ? reactionSummary : undefined,
+          lovesSnapshot: lovesSnapshot.length > 0 ? lovesSnapshot : undefined,
         }),
       });
       if (resp.ok) {

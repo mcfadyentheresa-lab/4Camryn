@@ -23,6 +23,7 @@ import PhaseGraduationModal from './components/PhaseGraduationModal';
 import ProtocolComplete from './components/ProtocolComplete';
 import NotificationBanner from './components/NotificationBanner';
 import MorningNudgePrompt from './components/MorningNudgePrompt';
+import LovesSection from './components/LovesSection';
 import './App.css';
 import { syncToFrontDoor } from './services/camrynSyncService';
 
@@ -122,7 +123,7 @@ function App() {
   const [saveStatus, setSaveStatus] = useState('Not saved yet');
   const [view, setView] = useState<AppView>(() => {
     const saved = localStorage.getItem('camryn_view');
-    const valid: AppView[] = ['today', 'body', 'food', 'confidence', 'space', 'journal', 'profile'];
+    const valid: AppView[] = ['today', 'body', 'food', 'confidence', 'space', 'journal', 'loves', 'profile'];
     return (saved && valid.includes(saved as AppView)) ? (saved as AppView) : 'journal';
   });
   const handleViewChange = (v: AppView) => { setView(v); localStorage.setItem('camryn_view', v); };
@@ -761,6 +762,11 @@ function App() {
                     .eq('user_id', user.id);
                 }}
               />
+            </div>
+          )}
+          {view === 'loves' && (
+            <div className="lane-single">
+              <LovesSection userId={user.id} />
             </div>
           )}
           {view === 'profile' && (

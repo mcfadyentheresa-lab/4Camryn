@@ -5,6 +5,7 @@ export interface Quest {
   title: string;
   targetDays: number;
   soft: boolean;
+  description?: string;
 }
 
 export interface QuestState {
@@ -40,6 +41,7 @@ export const FOUNDATION_QUESTS: Quest[] = [
   { id: 'stress-breath',        title: 'Daily breathwork (1 min)',    targetDays: 14, soft: true  },
   { id: 'cool-room-sleep',      title: 'Cool room for sleep',         targetDays: 21, soft: true  },
   { id: 'no-caffeine-after-2',  title: 'No caffeine after 2pm',       targetDays: 14, soft: false },
+  { id: 'space-reset',          title: 'Space cleared or tidied',     targetDays: 14, soft: true, description: 'User mentions tidying, clearing, decluttering, organising, resetting, or cleaning any area — bedroom, kitchen, desk, workspace, closet, bag, car, etc.' },
 ];
 
 export const IGNITION_QUESTS: Quest[] = [
@@ -53,6 +55,7 @@ export const IGNITION_QUESTS: Quest[] = [
   { id: 'magnesium-pm',         title: 'Magnesium glycinate at night', targetDays: 21, soft: true },
   { id: 'cycle-tracking',       title: 'Daily cycle tracking',       targetDays: 21, soft: true  },
   { id: 'electrolytes-daily',   title: 'Electrolytes with hydration', targetDays: 14, soft: true },
+  { id: 'space-reset',          title: 'Space cleared or tidied',    targetDays: 14, soft: true, description: 'User mentions tidying, clearing, decluttering, organising, resetting, or cleaning any area — bedroom, kitchen, desk, workspace, closet, bag, car, etc.' },
 ];
 
 export const BUILD_QUESTS: Quest[] = [
@@ -66,6 +69,7 @@ export const BUILD_QUESTS: Quest[] = [
   { id: 'seed-cycling',         title: 'Seed cycling daily',         targetDays: 28, soft: true  },
   { id: 'collagen-daily',       title: 'Collagen supplement daily',  targetDays: 30, soft: true  },
   { id: 'stress-log',           title: 'Daily stress check-in',      targetDays: 21, soft: true  },
+  { id: 'space-reset',          title: 'Space cleared or tidied',    targetDays: 21, soft: true, description: 'User mentions tidying, clearing, decluttering, organising, resetting, or cleaning any area — bedroom, kitchen, desk, workspace, closet, bag, car, etc.' },
 ];
 
 export const INTEGRATE_QUESTS: Quest[] = [
@@ -79,6 +83,7 @@ export const INTEGRATE_QUESTS: Quest[] = [
   { id: 'stress-recovery-5min', title: 'Stress recovery ≤5 min × 3', targetDays: 3,  soft: false },
   { id: 'hard-thing-follicular', title: 'Hard thing in follicular',  targetDays: 1,  soft: false },
   { id: 'full-protocol-hard-week', title: 'Protocol through hard week', targetDays: 7, soft: false },
+  { id: 'space-reset',          title: 'Space cleared or tidied',    targetDays: 21, soft: true, description: 'User mentions tidying, clearing, decluttering, organising, resetting, or cleaning any area — bedroom, kitchen, desk, workspace, closet, bag, car, etc.' },
 ];
 
 export const SUSTAIN_QUESTS: Quest[] = [
@@ -92,6 +97,7 @@ export const SUSTAIN_QUESTS: Quest[] = [
   { id: 'health-identity-act',  title: 'External health identity act', targetDays: 1, soft: false },
   { id: 'arc2-goals-review',    title: 'Arc 2 goals reviewed',        targetDays: 1,  soft: false },
   { id: 'protocol-12wk-hold',   title: '12 weeks ≥80% adherence',     targetDays: 60, soft: false },
+  { id: 'space-reset',          title: 'Space cleared or tidied',     targetDays: 21, soft: true, description: 'User mentions tidying, clearing, decluttering, organising, resetting, or cleaning any area — bedroom, kitchen, desk, workspace, closet, bag, car, etc.' },
 ];
 
 export const THRIVE_QUESTS: Quest[] = [
@@ -105,6 +111,7 @@ export const THRIVE_QUESTS: Quest[] = [
   { id: 'year-completion',      title: 'Full year protocol complete', targetDays: 1,  soft: false },
   { id: '52wk-adherence',       title: '52 weeks partial adherence',  targetDays: 1,  soft: false },
   { id: 'arc2-ready',           title: 'Ready for Arc 2',             targetDays: 1,  soft: false },
+  { id: 'space-reset',          title: 'Space cleared or tidied',     targetDays: 14, soft: true, description: 'User mentions tidying, clearing, decluttering, organising, resetting, or cleaning any area — bedroom, kitchen, desk, workspace, closet, bag, car, etc.' },
 ];
 
 export const PHASE_QUESTS: Record<number, Quest[]> = {

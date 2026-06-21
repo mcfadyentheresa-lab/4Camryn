@@ -38,6 +38,7 @@ interface PersonalNote {
 interface QuestDef {
   id: string;
   title: string;
+  description?: string;
 }
 
 interface FirstTask {
@@ -82,6 +83,12 @@ interface VitalsSnapshot {
   days_logged: number;
 }
 
+interface LovesItem {
+  category: string;
+  title: string;
+  note: string;
+}
+
 interface JournalRequest {
   userText: string;
   cyclePhase: string;
@@ -104,6 +111,7 @@ interface JournalRequest {
   vitalsSnapshot?: VitalsSnapshot | null;
   recentContext?: string[];
   reactionSummary?: { helpful: number; not_quite: number; recentNotQuite: string[] } | null;
+  lovesSnapshot?: LovesItem[];
 }
 
 interface JournalResponse {
@@ -123,7 +131,8 @@ function buildSystemPrompt(
   lastWinddown?: string | null,
   timeOfDay?: string,
   phaseQuests?: QuestDef[],
-  firstTask?: FirstTask | null
+  firstTask?: FirstTask | null,
+  lovesSnapshot?: LovesItem[]
 ): string {
   const nameNote = userName
     ? ` The user's name is ${userName} — use it occasionally (not every message) to keep things warm.`
@@ -145,8 +154,23 @@ function buildSystemPrompt(
 
   let questBlock = "";
   if (phaseQuests && phaseQuests.length > 0) {
-    const questLines = phaseQuests.map((q) => `  - id: "${q.id}", habit: "${q.title}"`).join("\n");
+    const questLines = phaseQuests.map((q) => {
+      const descStr = q.description ? ` (matches: ${q.description})` : "";
+      return `  - id: "${q.id}", habit: "${q.title}"${descStr}`;
+    }).join("\n");
     questBlock = `\n\nCurrent phase habit quests (do NOT recite this list):\n${questLines}\n\nWhen the user mentions doing something matching one of these, acknowledge it briefly ("Sounds like you got your morning hydration in — that counts."). Then output <mastery>["quest-id"]</mastery> after your reply with IDs you're confident were completed. Output <mastery>[]</mastery> if nothing matches. Be conservative.`;
+  }
+
+  let lovesBlock = "";
+  if (lovesSnapshot && lovesSnapshot.length > 0) {
+    const loveLines = lovesSnapshot
+      .slice(0, 30)
+      .map((item) => {
+        const noteStr = item.note ? ` — "${item.note}"` : "";
+        return `  - [${item.category}] ${item.title}${noteStr}`;
+      })
+      .join("\n");
+    lovesBlock = `\n\nThings she loves (from her personal collection — use this to personalise suggestions and notice connections):\n${loveLines}\n\nDon't recite this list. Use it to make the protocol feel personal: if a food she loves fits the phase, name it. If she mentions something that's already in this list, notice it. If she shares something new that fits the pattern of what she loves, engage with it as relationship-building context.`;
   }
 
   // Directive task block — the key behavioural shift
@@ -180,7 +204,7 @@ LINKS: When sharing an article, resource, or reading that would genuinely help, 
 Only share links you know exist and are genuinely relevant. Use real, well-known sources (pubmed, healthline, well-known wellness publications). Do not make up URLs. If you have nothing to share, output <links>[]</links>.`;
 
   if (isNightMode) {
-    return `You are Camryn — a calm, warm companion managing this person through a year-long wellness protocol. It is night-time.${nameNote}${memoryBlock}${questBlock}${morningBridge}
+    return `You are Camryn — a calm, warm companion managing this person through a year-long wellness protocol. It is night-time.${nameNote}${memoryBlock}${lovesBlock}${questBlock}${morningBridge}
 
 Tonight you're closing the day. Reflect, don't plan.
 
@@ -197,7 +221,7 @@ ${logInstructions}
 After your reply: <extract>[personal notes array]</extract> then <winddown>1–2 sentence summary of her emotional state tonight</winddown> then <log>[...]</log> then <links>[...]</links>.`;
   }
 
-  return `You are Camryn — the manager of this person's year-long wellness protocol. You direct, she executes, you log it for her. She doesn't manage the app — you do.${nameNote}${memoryBlock}${questBlock}${taskBlock}${morningBridge}
+  return `You are Camryn — the manager of this person's year-long wellness protocol. You direct, she executes, you log it for her. She doesn't manage the app — you do.${nameNote}${memoryBlock}${lovesBlock}${questBlock}${taskBlock}${morningBridge}
 
 Your job is to run her day. You tell her what to do next, she comes back and reports, you acknowledge it, log it silently, and give her the next thing. Over a year she'll complete the protocol through this conversation — she never has to think about what's next.
 
@@ -625,7 +649,8 @@ Deno.serve(async (req: Request) => {
           body.lastWinddown,
           body.timeOfDay,
           body.phaseQuests,
-          body.firstTask
+          body.firstTask,
+          body.lovesSnapshot
         ),
         messages,
       }),
