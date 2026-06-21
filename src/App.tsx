@@ -24,6 +24,7 @@ import ProtocolComplete from './components/ProtocolComplete';
 import NotificationBanner from './components/NotificationBanner';
 import MorningNudgePrompt from './components/MorningNudgePrompt';
 import './App.css';
+import { syncToFrontDoor } from './services/camrynSyncService';
 
 // Register service worker for push notifications
 if ('serviceWorker' in navigator) {
@@ -201,6 +202,9 @@ function App() {
   }, []);
 
   const loadSession = async (userId: string) => {
+    let resolvedSession: Session | null = null;
+    let localStreak = 0;
+    let localSavedToday = false;
     const { data: sessionData } = await supabase
       .from('camryn_sessions')
       .select('*')
@@ -237,9 +241,11 @@ function App() {
           .eq('user_id', userId)
           .select()
           .maybeSingle();
-        setSession(({ ...sessionData, ...patched, ...(updated ?? {}) } as Session));
+        resolvedSession = { ...sessionData, ...patched, ...(updated ?? {}) } as Session;
+        setSession(resolvedSession);
       } else {
-        setSession(sessionData as Session);
+        resolvedSession = sessionData as Session;
+        setSession(resolvedSession);
       }
     } else {
       const { data: { user: authUser } } = await supabase.auth.getUser();
@@ -256,7 +262,7 @@ function App() {
         display_name: metaName ?? null,
       };
       const { data } = await supabase.from('camryn_sessions').insert([newSession]).select().maybeSingle();
-      if (data) setSession(data as Session);
+      if (data) { resolvedSession = data as Session; setSession(resolvedSession); }
     }
 
     const { data: unlocksData } = await supabase
@@ -294,6 +300,7 @@ function App() {
         cursor.setDate(cursor.getDate() - 1);
       }
       setDailyStreak(streak);
+      localStreak = streak;
       // Days since last save
       const latest = savesData[0]?.save_date as string;
       const latestDate = new Date(latest + 'T12:00:00');
@@ -301,12 +308,30 @@ function App() {
       todayDate.setHours(12, 0, 0, 0);
       const diff = Math.round((todayDate.getTime() - latestDate.getTime()) / 86400000);
       setDaysSinceLastSave(diff);
-      if (diff === 0) setSavedToday(true);
+      if (diff === 0) { localSavedToday = true; setSavedToday(true); }
     } else {
       setDaysSinceLastSave(null);
     }
 
     setShowCheckin((prev) => prev || shouldShowCheckin());
+    if (resolvedSession) {
+      const _syncPhase = PROTOCOL.phases.find((p) => p.id === resolvedSession!.current_phase);
+      const _syncTasks = dailyTasks(resolvedSession!.current_phase, resolvedSession!.energy, resolvedSession!.stress, resolvedSession!.cycle_phase_name);
+      syncToFrontDoor({
+        userId,
+        protocolPhase: resolvedSession!.current_phase,
+        protocolPhaseName: _syncPhase?.name ?? '',
+        cyclePhase: resolvedSession!.cycle_phase_name,
+        energy: resolvedSession!.energy,
+        stress: resolvedSession!.stress,
+        dailyStreak: localStreak,
+        savedToday: localSavedToday,
+        tasksComplete: 0,
+        tasksTotal: 0,
+        protocolComplete: resolvedSession!.protocol_complete ?? false,
+        priorityTaskTitle: (_syncTasks[0] as any)?.shortTitle ?? null,
+      }).catch(() => {});
+    }
   };
 
   // Re-evaluate night mode every minute so the app transitions naturally at the threshold hour
@@ -330,6 +355,24 @@ function App() {
       .maybeSingle();
 
     if (data) setSession(data as Session);
+    if (data && (field === 'energy' || field === 'stress')) {
+      const _syncPhase = PROTOCOL.phases.find((p) => p.id === data.current_phase);
+      const _syncTasks = dailyTasks(data.current_phase, data.energy, data.stress, data.cycle_phase_name);
+      syncToFrontDoor({
+        userId: user.id,
+        protocolPhase: data.current_phase,
+        protocolPhaseName: _syncPhase?.name ?? '',
+        cyclePhase: data.cycle_phase_name,
+        energy: data.energy,
+        stress: data.stress,
+        dailyStreak,
+        savedToday,
+        tasksComplete: 0,
+        tasksTotal: 0,
+        protocolComplete: data.protocol_complete ?? false,
+        priorityTaskTitle: (_syncTasks[0] as any)?.shortTitle ?? null,
+      }).catch(() => {});
+    }
   };
 
   const handleCycleDateChange = (dateStr: string) => {
@@ -372,6 +415,20 @@ function App() {
     await updateSessionField('save_count', (session.save_count || 0) + 1);
     setSyncDot('synced');
     setSavedToday(true);
+    syncToFrontDoor({
+      userId: user.id,
+      protocolPhase: session.current_phase,
+      protocolPhaseName: PROTOCOL.phases.find((p) => p.id === session.current_phase)?.name ?? '',
+      cyclePhase: session.cycle_phase_name,
+      energy: session.energy,
+      stress: session.stress,
+      dailyStreak,
+      savedToday: true,
+      tasksComplete,
+      tasksTotal,
+      protocolComplete: session.protocol_complete ?? false,
+      priorityTaskTitle: firstTask?.shortTitle ?? null,
+    }).catch(() => {});
     setDaysSinceLastSave(0);
     setDailyStreak((prev) => (prev === 0 ? 1 : prev));
     setTimeout(() => setSyncDot('idle'), 3000);
