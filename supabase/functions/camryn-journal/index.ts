@@ -122,6 +122,7 @@ interface JournalResponse {
   recognizedQuests?: string[];
   logActions?: LogAction[];
   sharedLinks?: SharedLink[];
+  assignedTask?: string | null;
 }
 
 function buildSystemPrompt(
@@ -201,7 +202,9 @@ Only extract what was clearly stated by the user in their current message. Do NO
 LINKS: When sharing an article, resource, or reading that would genuinely help, output a <links>[...]</links> block after your reply. Only share links when you naturally say "here, read this" or "this is worth a look" in your reply. Format:
 [{"url":"https://example.com/article","label":"Why morning hydration matters","reason":"It'll help make sense of why we start here"}]
 
-Only share links you know exist and are genuinely relevant. Use real, well-known sources (pubmed, healthline, well-known wellness publications). Do not make up URLs. If you have nothing to share, output <links>[]</links>.`;
+Only share links you know exist and are genuinely relevant. Use real, well-known sources (pubmed, healthline, well-known wellness publications). Do not make up URLs. If you have nothing to share, output <links>[]</links>.
+
+TASK ASSIGNMENT: When you give the user a specific, concrete action to do today — a "go do this now" directive, not a recap or a habit reminder — output <task>Short task title</task> after your reply. Plain text only, 8 words max, written as an action ("Drink your morning water", "Do your 5-minute breathwork"). Only output this when you are actively pushing (not holding space). Output it at most once per response. Omit it entirely if you are reflecting, checking in, or not assigning a concrete action.`;
 
   if (isNightMode) {
     return `You are Camryn — a calm, warm companion managing this person through a year-long wellness protocol. It is night-time.${nameNote}${memoryBlock}${lovesBlock}${questBlock}${morningBridge}
@@ -273,7 +276,7 @@ Conversation guidelines:
 - If food data is present, briefly confirm it in one sentence: "I can see you've logged breakfast — 45g protein so far."
 ${logInstructions}
 
-After your reply: <extract>[personal notes array]</extract> then <mastery>[quest ids]</mastery> then <log>[...]</log> then <links>[...]</links>.`;
+After your reply: <extract>[personal notes array]</extract> then <mastery>[quest ids]</mastery> then <log>[...]</log> then <links>[...]</links> then <task>title if assigning one</task>.`;
 }
 
 const PHASE_PROFILES: Record<number, { name: string; weeks: string; tone: string; focus: string[] }> = {
@@ -587,6 +590,14 @@ function parseSharedLinks(rawReply: string): { reply: string; sharedLinks: Share
   return { reply, sharedLinks: value };
 }
 
+function parseAssignedTask(rawReply: string): { reply: string; assignedTask: string | null } {
+  const { reply, value } = parseTag(rawReply, "task", (s) => {
+    const trimmed = s.trim().slice(0, 120);
+    return trimmed.length > 0 ? trimmed : null;
+  }, null);
+  return { reply, assignedTask: value };
+}
+
 function generateFallbackReply(req: JournalRequest): string {
   if (req.isNightMode) {
     return "It sounds like today had its moments. Whatever it held, you showed up — that's worth something. Rest well tonight.";
@@ -678,6 +689,9 @@ Deno.serve(async (req: Request) => {
     const { reply: r3, sharedLinks } = parseSharedLinks(rawReply);
     rawReply = r3;
 
+    const { reply: r4, assignedTask } = parseAssignedTask(rawReply);
+    rawReply = r4;
+
     let winddownSummary: string | null = null;
     if (body.isNightMode) {
       const wd = parseWinddownSummary(rawReply);
@@ -687,7 +701,7 @@ Deno.serve(async (req: Request) => {
 
     const { reply, notes: extractedNotes } = parseExtractedNotes(rawReply, today);
 
-    const result: JournalResponse = { reply, extractedNotes, winddownSummary, recognizedQuests, logActions, sharedLinks };
+    const result: JournalResponse = { reply, extractedNotes, winddownSummary, recognizedQuests, logActions, sharedLinks, assignedTask };
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

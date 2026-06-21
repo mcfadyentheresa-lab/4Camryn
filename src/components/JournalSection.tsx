@@ -4,6 +4,7 @@ import { loadMasteryData, calcStreak, FOUNDATION_QUESTS, PHASE_QUESTS, isTodayCo
 import { getIntentionalAction } from '../lib/cycleActions';
 import CamrynAvatar from './ui/CamrynAvatar';
 import type { PersonalNote } from '../App';
+import { upsertChatTask } from '../services/camrynSyncService';
 
 interface JournalEntry {
   id: string;
@@ -590,6 +591,11 @@ export default function JournalSection({ userId, session, focusInput, displayNam
         // Silently log anything Camryn extracted from the user's message
         if (Array.isArray(json.logActions) && json.logActions.length > 0) {
           applyLogActions(userId, json.logActions); // fire-and-forget, never blocks chat
+        }
+
+        // Push a concrete task to the front door app when Camryn assigns one
+        if (typeof json.assignedTask === 'string' && json.assignedTask.trim()) {
+          upsertChatTask(userId, json.assignedTask.trim(), session.energy); // fire-and-forget
         }
 
         // Attach shared links to this entry for rendering

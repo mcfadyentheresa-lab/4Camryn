@@ -38,6 +38,22 @@ async function upsertCamrynState(p: CamrynSyncPayload) {
   else { await supabase.from('camryn_state').insert({ ...payload, user_id: p.userId }); }
 }
 
+export async function upsertChatTask(userId: string, title: string, energy: string): Promise<void> {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const sourceId = `camryn-chat-${userId.slice(0, 8)}-${today}`;
+    const { data: existing } = await supabase.from('daily_items').select('id, completion_state').eq('source_id', sourceId).maybeSingle();
+    if (existing) {
+      if (existing.completion_state === 'pending') { await supabase.from('daily_items').update({ title, updated_at: new Date().toISOString() }).eq('id', existing.id); }
+      return;
+    }
+    const energyFit = energy === 'High' ? 'high' : energy === 'Low' ? 'low' : 'medium';
+    await supabase.from('daily_items').insert({ source_app: 'camryn', source_id: sourceId, title, domain: 'wellness', priority: 2, energy_fit: energyFit, estimated_minutes: 20, due_today: true, scheduled_date: today, completion_state: 'pending', is_hero: false, display_order: 45, user_id: userId });
+  } catch (err) {
+    console.error('[camrynSync] upsertChatTask failed:', err);
+  }
+}
+
 async function upsertDailyItem(taskTitle: string, energy: string, userId: string) {
   const today = new Date().toISOString().split('T')[0];
   const sourceId = `camryn-${userId.slice(0, 8)}-${today}`;
