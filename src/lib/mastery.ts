@@ -45,21 +45,21 @@ export const FOUNDATION_QUESTS: Quest[] = [
 export const IGNITION_QUESTS: Quest[] = [
   { id: 'protein-target',       title: 'Protein target 5/7 days',    targetDays: 21, soft: false },
   { id: 'eating-window',        title: 'Eating window maintained',   targetDays: 14, soft: false },
-  { id: 'daily-walk',           title: 'Daily walk',                 targetDays: 30, soft: true  },
-  { id: 'strength-2x',          title: 'Strength 2×/week',           targetDays: 28, soft: false },
-  { id: 'skincare-routine',     title: 'Skincare routine',           targetDays: 30, soft: true  },
+  { id: 'daily-walk',           title: 'Daily walk',                 targetDays: 21, soft: true  },
+  { id: 'strength-2x',          title: 'Strength 2×/week',           targetDays: 21, soft: false },
+  { id: 'skincare-routine',     title: 'Skincare routine',           targetDays: 21, soft: true  },
   { id: 'protein-breakfast',    title: 'Protein-first breakfast',    targetDays: 21, soft: false },
-  { id: 'spf-daily',            title: 'SPF every morning',          targetDays: 30, soft: true  },
+  { id: 'spf-daily',            title: 'SPF every morning',          targetDays: 21, soft: true  },
   { id: 'magnesium-pm',         title: 'Magnesium glycinate at night', targetDays: 21, soft: true },
-  { id: 'cycle-tracking',       title: 'Daily cycle tracking',       targetDays: 28, soft: true  },
+  { id: 'cycle-tracking',       title: 'Daily cycle tracking',       targetDays: 21, soft: true  },
   { id: 'electrolytes-daily',   title: 'Electrolytes with hydration', targetDays: 14, soft: true },
 ];
 
 export const BUILD_QUESTS: Quest[] = [
-  { id: 'cycle-training',       title: 'Cycle-adapted training',     targetDays: 56, soft: false },
+  { id: 'cycle-training',       title: 'Cycle-adapted training',     targetDays: 42, soft: false },
   { id: 'joint-mobility',       title: 'Joint mobility daily',       targetDays: 30, soft: true  },
-  { id: 'omega3-daily',         title: 'Omega-3 daily',              targetDays: 60, soft: true  },
-  { id: 'hormone-stack',        title: 'Hormone support stack',      targetDays: 60, soft: false },
+  { id: 'omega3-daily',         title: 'Omega-3 daily',              targetDays: 42, soft: true  },
+  { id: 'hormone-stack',        title: 'Hormone support stack',      targetDays: 42, soft: false },
   { id: 'hormone-bloodwork',    title: 'Hormone bloodwork done',     targetDays: 1,  soft: false },
   { id: 'strength-3x',          title: 'Strength 3×/week',           targetDays: 28, soft: false },
   { id: 'progressive-overload', title: 'Progressive overload logged', targetDays: 28, soft: false },
@@ -91,7 +91,7 @@ export const SUSTAIN_QUESTS: Quest[] = [
   { id: 'min-dose-documented',  title: 'Minimum dose protocol written', targetDays: 1, soft: false },
   { id: 'health-identity-act',  title: 'External health identity act', targetDays: 1, soft: false },
   { id: 'arc2-goals-review',    title: 'Arc 2 goals reviewed',        targetDays: 1,  soft: false },
-  { id: 'protocol-12wk-hold',   title: '12 weeks ≥80% adherence',     targetDays: 84, soft: false },
+  { id: 'protocol-12wk-hold',   title: '12 weeks ≥80% adherence',     targetDays: 60, soft: false },
 ];
 
 export const THRIVE_QUESTS: Quest[] = [
@@ -103,7 +103,7 @@ export const THRIVE_QUESTS: Quest[] = [
   { id: 'maintenance-tested',   title: 'Maintenance protocol tested', targetDays: 14, soft: false },
   { id: 'all-phases-mastery',   title: 'All previous phases mastered', targetDays: 1, soft: false },
   { id: 'year-completion',      title: 'Full year protocol complete', targetDays: 1,  soft: false },
-  { id: '52wk-adherence',       title: '52 weeks partial adherence',  targetDays: 364, soft: true },
+  { id: '52wk-adherence',       title: '52 weeks partial adherence',  targetDays: 1,  soft: false },
   { id: 'arc2-ready',           title: 'Ready for Arc 2',             targetDays: 1,  soft: false },
 ];
 
