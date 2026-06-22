@@ -238,7 +238,7 @@ function App() {
       if (Object.keys(patched).length > 0) {
         const { data: updated } = await supabase
           .from('camryn_sessions')
-          .update(patched)
+          .update(patched as any)
           .eq('user_id', userId)
           .select()
           .maybeSingle();
@@ -350,7 +350,7 @@ function App() {
 
     const { data } = await supabase
       .from('camryn_sessions')
-      .update({ [field]: value })
+      .update({ [field]: value } as any)
       .eq('user_id', user.id)
       .select()
       .maybeSingle();

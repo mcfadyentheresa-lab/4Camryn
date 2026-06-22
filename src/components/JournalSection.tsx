@@ -346,11 +346,9 @@ async function applyLogActions(userId: string, actions: LogAction[]): Promise<vo
           fiber_g: action.fiber_g ?? null,
         }]);
       } else if (action.type === 'exercise') {
-        await supabase.from('camryn_body').upsert([{
-          user_id: userId,
-          entry_date: today,
-          exercise_note: `${action.activity ?? 'exercise'}${action.duration_minutes ? ` — ${action.duration_minutes} min` : ''}${action.notes ? ` (${action.notes})` : ''}`,
-        }], { onConflict: 'user_id,entry_date', ignoreDuplicates: false });
+        // exercise_note column does not exist in camryn_body; exercise data
+        // is tracked in camryn_exercise via BodySection. No-op here.
+        void action;
       } else if (action.type === 'mood') {
         await supabase.from('camryn_confidence').upsert([{
           user_id: userId,

@@ -115,7 +115,7 @@ export default function VitalsCard({ userId }: VitalsCardProps) {
           .not('hrv_ms', 'is', null),
       ]);
 
-      setLatest((latestRes.data as VitalsRow) || null);
+      setLatest((latestRes.data as unknown as VitalsRow) || null);
       setDaysLogged(countRes.count ?? 0);
 
       const hrvVals = ((hrv7Res.data ?? []) as { hrv_ms: number }[]).map((r) => r.hrv_ms);

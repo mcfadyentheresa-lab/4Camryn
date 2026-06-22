@@ -42,6 +42,7 @@ export function usePushNotifications(userId: string | null) {
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
       });
       const json = sub.toJSON();
+      if (!json.endpoint) throw new Error('Push subscription missing endpoint');
       const { error } = await supabase.from('push_subscriptions').upsert({
         user_id: userId,
         endpoint: json.endpoint,
