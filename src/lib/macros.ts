@@ -48,6 +48,27 @@ const CYCLE_ADJUSTMENTS: Record<string, number> = {
 // When not exercising: reduce calories (no exercise burn), reduce carbs
 const REST_DAY_ADJUSTMENT = -200;
 
+// === Input validation allowlists and sane ranges ===
+
+const VALID_GOALS = new Set<string>(['lose', 'maintain', 'build']);
+const VALID_ACTIVITY_BASELINES = new Set<string>(['sedentary', 'lightly_active', 'active']);
+// Must match CYCLE_ADJUSTMENTS keys above
+const VALID_CYCLE_PHASES = new Set<string>([
+  'Follicular', 'Ovulation', 'Early luteal', 'Late luteal', 'Menstruation', 'Not sure',
+]);
+
+const WEIGHT_KG_RANGE: [number, number] = [20, 300];
+const HEIGHT_CM_RANGE: [number, number] = [100, 250];
+const AGE_RANGE: [number, number] = [10, 120];
+
+function clampWithWarn(value: number, [min, max]: [number, number], field: string): number {
+  if (value < min || value > max) {
+    console.warn(`[calcMacroTargets] ${field}=${value} outside sane range [${min}–${max}]; clamped.`);
+    return Math.max(min, Math.min(max, value));
+  }
+  return value;
+}
+
 export function calcMacroTargets(
   profile: FoodProfile,
   opts: {
@@ -56,11 +77,46 @@ export function calcMacroTargets(
     exercised: boolean;
   }
 ): MacroTargets {
-  const { weight_kg, height_cm, age, goal, activity_baseline } = profile;
+  // Sanitize profile inputs
+  let weight_kg = profile.weight_kg;
+  let height_cm = profile.height_cm;
+  let age = profile.age;
+  let { goal, activity_baseline } = profile;
+
+  if (weight_kg != null) weight_kg = clampWithWarn(weight_kg, WEIGHT_KG_RANGE, 'weight_kg');
+  if (height_cm != null) height_cm = clampWithWarn(height_cm, HEIGHT_CM_RANGE, 'height_cm');
+  if (age != null) age = clampWithWarn(age, AGE_RANGE, 'age');
+
+  if (!VALID_GOALS.has(goal)) {
+    console.warn(`[calcMacroTargets] Unknown goal "${goal}" — falling back to "maintain".`);
+    goal = 'maintain';
+  }
+  if (!VALID_ACTIVITY_BASELINES.has(activity_baseline)) {
+    // Critical: unknown key makes ACTIVITY_MULTIPLIERS lookup return undefined → NaN TDEE
+    console.warn(`[calcMacroTargets] Unknown activity_baseline "${activity_baseline}" — falling back to "lightly_active".`);
+    activity_baseline = 'lightly_active';
+  }
+
+  // Phases 1–3 have distinct macro mappings; 4–6 follow phase-3 nutrition targets
+  let phase = opts.phase;
+  let cyclePhase = opts.cyclePhase;
+  const { exercised } = opts;
+
+  if (!Number.isInteger(phase) || phase < 1) {
+    console.warn(`[calcMacroTargets] phase ${phase} is invalid — clamped to 1.`);
+    phase = 1;
+  } else if (phase > 3) {
+    console.warn(`[calcMacroTargets] phase ${phase} has no macro mapping — clamped to 3.`);
+    phase = 3;
+  }
+  if (!VALID_CYCLE_PHASES.has(cyclePhase)) {
+    console.warn(`[calcMacroTargets] Unknown cyclePhase "${cyclePhase}" — falling back to "Not sure".`);
+    cyclePhase = 'Not sure';
+  }
 
   // If no profile data, return sensible defaults
   if (!weight_kg || !height_cm || !age) {
-    return defaultTargets(opts.exercised, opts.phase, goal);
+    return defaultTargets(exercised, phase, goal);
   }
 
   const baseBmr = bmr(weight_kg, height_cm, age);
@@ -71,26 +127,26 @@ export function calcMacroTargets(
   if (goal === 'build') tdee += 200;
 
   // Phase adjustment
-  tdee += PHASE_ADJUSTMENTS[opts.phase] ?? 0;
+  tdee += PHASE_ADJUSTMENTS[phase] ?? 0;
 
   // Cycle adjustment
-  tdee += CYCLE_ADJUSTMENTS[opts.cyclePhase] ?? 0;
+  tdee += CYCLE_ADJUSTMENTS[cyclePhase] ?? 0;
 
   // Rest day: pull back on calories and carbs
-  if (!opts.exercised) tdee += REST_DAY_ADJUSTMENT;
+  if (!exercised) tdee += REST_DAY_ADJUSTMENT;
 
   const calories = Math.round(tdee / 10) * 10; // Round to nearest 10
 
   // Protein: 1.6–2.2g/kg depending on phase and goal
   const proteinMultiplier =
-    opts.phase === 3 ? 2.0 :
-    opts.phase === 2 ? 1.8 :
+    phase === 3 ? 2.0 :
+    phase === 2 ? 1.8 :
     goal === 'build' ? 1.8 : 1.6;
   const protein_g = Math.round(weight_kg * proteinMultiplier);
 
   // Carbs: reduced on rest days, higher on exercise days in Phase 2+
-  const carbPct = opts.exercised
-    ? (opts.phase >= 2 ? 0.40 : 0.35)
+  const carbPct = exercised
+    ? (phase >= 2 ? 0.40 : 0.35)
     : 0.30;
   const carbs_g = Math.round((calories * carbPct) / 4);
 
@@ -100,9 +156,9 @@ export function calcMacroTargets(
   const fat_g = Math.max(40, Math.round((calories - proteinCals - carbCals) / 9));
 
   // Fiber: 25–35g, higher on rest days (gut focus)
-  const fiber_g = opts.exercised ? 28 : 32;
+  const fiber_g = exercised ? 28 : 32;
 
-  const note = buildNote(opts.exercised, opts.cyclePhase, opts.phase, goal);
+  const note = buildNote(exercised, cyclePhase, phase, goal);
 
   return { calories, protein_g, carbs_g, fat_g, fiber_g, note };
 }
