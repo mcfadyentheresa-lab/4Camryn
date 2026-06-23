@@ -1,10 +1,13 @@
 // Database types for 4Camryn (Supabase project: xhdipmbdrcxnbutrjmhc)
-// Generated from: supabase/migrations/** + actual query/insert payloads
-// Status: PARTIAL — regenerate from `supabase gen types typescript` once CLI access is available.
-// Known gaps:
-//   - camryn_exercise: table used by app (BodySection.tsx) but no migration exists → partial type
+// Status: VERIFIED AGAINST LIVE SCHEMA — 2026-06-23
+// Source: information_schema.columns query against live DB + migration cross-reference
+// Notes:
+//   - camryn_exercise: does NOT exist in the live DB; type retained below as a stub for app
+//     code in BodySection.tsx that references it — that code will fail at runtime until the
+//     table is created via migration
+//   - camryn_products: present in live DB; added below
 //   - camryn_state / daily_items: FrontDoor cross-project tables; kept in camrynSyncService.ts
-//     which uses its own untyped client — intentionally excluded here.
+//     which uses its own untyped client — intentionally excluded here
 
 // Simplified to unknown to avoid TypeScript instantiation-depth failures in
 // component files with many imports. Callers always cast jsonb columns to
@@ -166,28 +169,28 @@ export interface Database {
           id: string
           user_id: string
           entry_date: string
-          confidence_note: string
-          rebrand_note: string
-          created_at: string
-          updated_at: string
+          confidence_note: string | null
+          rebrand_note: string | null
+          created_at: string | null
+          updated_at: string | null
         }
         Insert: {
           id?: string
           user_id: string
-          entry_date?: string
-          confidence_note?: string
-          rebrand_note?: string
-          created_at?: string
-          updated_at?: string
+          entry_date: string
+          confidence_note?: string | null
+          rebrand_note?: string | null
+          created_at?: string | null
+          updated_at?: string | null
         }
         Update: {
           id?: string
           user_id?: string
           entry_date?: string
-          confidence_note?: string
-          rebrand_note?: string
-          created_at?: string
-          updated_at?: string
+          confidence_note?: string | null
+          rebrand_note?: string | null
+          created_at?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -209,7 +212,7 @@ export interface Database {
         Insert: {
           id?: string
           user_id: string
-          entry_date?: string
+          entry_date: string
           weight?: number | null
           energy?: number | null
           symptoms?: string | null
@@ -240,34 +243,34 @@ export interface Database {
           id: string
           user_id: string
           entry_date: string
-          space_wins: string
-          friction_note: string
-          systems_note: string
-          environment_check: Json
-          created_at: string
-          updated_at: string
+          space_wins: string | null
+          friction_note: string | null
+          systems_note: string | null
+          environment_check: Json | null
+          created_at: string | null
+          updated_at: string | null
         }
         Insert: {
           id?: string
           user_id: string
-          entry_date?: string
-          space_wins?: string
-          friction_note?: string
-          systems_note?: string
-          environment_check?: Json
-          created_at?: string
-          updated_at?: string
+          entry_date: string
+          space_wins?: string | null
+          friction_note?: string | null
+          systems_note?: string | null
+          environment_check?: Json | null
+          created_at?: string | null
+          updated_at?: string | null
         }
         Update: {
           id?: string
           user_id?: string
           entry_date?: string
-          space_wins?: string
-          friction_note?: string
-          systems_note?: string
-          environment_check?: Json
-          created_at?: string
-          updated_at?: string
+          space_wins?: string | null
+          friction_note?: string | null
+          systems_note?: string | null
+          environment_check?: Json | null
+          created_at?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -276,44 +279,44 @@ export interface Database {
         Row: {
           id: string
           user_id: string
-          style_words: string
-          lifestyle_context: string
-          body_fit_dread: string
-          closet_best_outfit: string
-          closet_skip_piece: string
-          signal_wish: string
-          style_influence: string
+          style_words: string | null
+          lifestyle_context: string | null
+          body_fit_dread: string | null
+          closet_best_outfit: string | null
+          closet_skip_piece: string | null
+          signal_wish: string | null
+          style_influence: string | null
           rebrand_prompt: string
-          created_at: string
-          updated_at: string
+          created_at: string | null
+          updated_at: string | null
         }
         Insert: {
           id?: string
           user_id: string
-          style_words?: string
-          lifestyle_context?: string
-          body_fit_dread?: string
-          closet_best_outfit?: string
-          closet_skip_piece?: string
-          signal_wish?: string
-          style_influence?: string
+          style_words?: string | null
+          lifestyle_context?: string | null
+          body_fit_dread?: string | null
+          closet_best_outfit?: string | null
+          closet_skip_piece?: string | null
+          signal_wish?: string | null
+          style_influence?: string | null
           rebrand_prompt?: string
-          created_at?: string
-          updated_at?: string
+          created_at?: string | null
+          updated_at?: string | null
         }
         Update: {
           id?: string
           user_id?: string
-          style_words?: string
-          lifestyle_context?: string
-          body_fit_dread?: string
-          closet_best_outfit?: string
-          closet_skip_piece?: string
-          signal_wish?: string
-          style_influence?: string
+          style_words?: string | null
+          lifestyle_context?: string | null
+          body_fit_dread?: string | null
+          closet_best_outfit?: string | null
+          closet_skip_piece?: string | null
+          signal_wish?: string | null
+          style_influence?: string | null
           rebrand_prompt?: string
-          created_at?: string
-          updated_at?: string
+          created_at?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -325,10 +328,10 @@ export interface Database {
           created_at: string | null
           entry_date: string
           user_text: string
-          camryn_reply: string
-          phase: string
-          protocol_phase: number
-          energy: string
+          camryn_reply: string | null
+          phase: string | null
+          protocol_phase: number | null
+          energy: string | null
           body_snapshot: Json | null
           confidence_snapshot: Json | null
           mastery_snapshot: Json | null
@@ -339,10 +342,10 @@ export interface Database {
           created_at?: string | null
           entry_date: string
           user_text?: string
-          camryn_reply?: string
-          phase?: string
-          protocol_phase?: number
-          energy?: string
+          camryn_reply?: string | null
+          phase?: string | null
+          protocol_phase?: number | null
+          energy?: string | null
           body_snapshot?: Json | null
           confidence_snapshot?: Json | null
           mastery_snapshot?: Json | null
@@ -353,10 +356,10 @@ export interface Database {
           created_at?: string | null
           entry_date?: string
           user_text?: string
-          camryn_reply?: string
-          phase?: string
-          protocol_phase?: number
-          energy?: string
+          camryn_reply?: string | null
+          phase?: string | null
+          protocol_phase?: number | null
+          energy?: string | null
           body_snapshot?: Json | null
           confidence_snapshot?: Json | null
           mastery_snapshot?: Json | null
@@ -626,9 +629,40 @@ export interface Database {
         Relationships: []
       }
 
-      // NOTE: camryn_exercise is queried by BodySection.tsx but has NO migration.
-      // This type is app-derived only. A migration must be created before this
-      // table can be trusted in production.
+      camryn_products: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          url: string
+          category: string
+          notes: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          url: string
+          category?: string
+          notes?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          url?: string
+          category?: string
+          notes?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+
+      // NOTE: camryn_exercise does NOT exist in the live DB.
+      // This type stub is kept to prevent immediate compile errors in BodySection.tsx.
+      // A migration must be created before any writes to this table will succeed at runtime.
       camryn_exercise: {
         Row: {
           id: string
