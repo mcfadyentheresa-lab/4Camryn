@@ -138,6 +138,7 @@ function App() {
   const [savedToday, setSavedToday] = useState(false);
   const [dailyStreak, setDailyStreak] = useState(0);
   const [daysSinceLastSave, setDaysSinceLastSave] = useState<number | null>(null);
+  const [todayTaskCounts, setTodayTaskCounts] = useState<{ complete: number; total: number }>({ complete: 0, total: 0 });
 
   const firstTask = useMemo(() => {
     if (!session) return null;
@@ -207,6 +208,7 @@ function App() {
     let resolvedSession: Session | null = null;
     let localStreak = 0;
     let localSavedToday = false;
+    let localTaskCounts = { complete: 0, total: 0 };
     const { data: sessionData } = await supabase
       .from('camryn_sessions')
       .select('*')
@@ -283,7 +285,7 @@ function App() {
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
     const { data: savesData } = await supabase
       .from('camryn_daily_saves')
-      .select('save_date')
+      .select('save_date, tasks_complete, tasks_total')
       .eq('user_id', userId)
       .gte('save_date', ninetyDaysAgo.toISOString().split('T')[0])
       .order('save_date', { ascending: false });
@@ -310,7 +312,16 @@ function App() {
       todayDate.setHours(12, 0, 0, 0);
       const diff = Math.round((todayDate.getTime() - latestDate.getTime()) / 86400000);
       setDaysSinceLastSave(diff);
-      if (diff === 0) { localSavedToday = true; setSavedToday(true); }
+      if (diff === 0) {
+        localSavedToday = true;
+        setSavedToday(true);
+        const todayRow = savesData.find((r: any) => r.save_date === todayStr);
+        if (todayRow) {
+          const localCounts = { complete: (todayRow as any).tasks_complete ?? 0, total: (todayRow as any).tasks_total ?? 0 };
+          setTodayTaskCounts(localCounts);
+          localTaskCounts = localCounts;
+        }
+      }
     } else {
       setDaysSinceLastSave(null);
     }
@@ -328,8 +339,8 @@ function App() {
         stress: resolvedSession!.stress,
         dailyStreak: localStreak,
         savedToday: localSavedToday,
-        tasksComplete: 0,
-        tasksTotal: 0,
+        tasksComplete: localTaskCounts.complete,
+        tasksTotal: localTaskCounts.total,
         protocolComplete: resolvedSession!.protocol_complete ?? false,
         priorityTaskTitle: (_syncTasks[0] as any)?.shortTitle ?? null,
       }).catch(() => {});
@@ -369,8 +380,8 @@ function App() {
         stress: data.stress,
         dailyStreak,
         savedToday,
-        tasksComplete: 0,
-        tasksTotal: 0,
+        tasksComplete: todayTaskCounts.complete,
+        tasksTotal: todayTaskCounts.total,
         protocolComplete: data.protocol_complete ?? false,
         priorityTaskTitle: (_syncTasks[0] as any)?.shortTitle ?? null,
       }).catch(() => {});
@@ -417,6 +428,7 @@ function App() {
     await updateSessionField('save_count', (session.save_count || 0) + 1);
     setSyncDot('synced');
     setSavedToday(true);
+    setTodayTaskCounts({ complete: tasksComplete, total: tasksTotal });
     syncToFrontDoor({
       userId: user.id,
       protocolPhase: session.current_phase,
