@@ -25,7 +25,7 @@ import NotificationBanner from './components/NotificationBanner';
 import MorningNudgePrompt from './components/MorningNudgePrompt';
 import LovesSection from './components/LovesSection';
 import './App.css';
-import { syncToFrontDoor } from './services/camrynSyncService';
+import { syncToFrontDoor, fetchFrontDoorCompletions } from './services/camrynSyncService';
 
 // Register service worker for push notifications
 if ('serviceWorker' in navigator) {
@@ -139,6 +139,7 @@ function App() {
   const [dailyStreak, setDailyStreak] = useState(0);
   const [daysSinceLastSave, setDaysSinceLastSave] = useState<number | null>(null);
   const [todayTaskCounts, setTodayTaskCounts] = useState<{ complete: number; total: number }>({ complete: 0, total: 0 });
+  const [frontDoorCompletions, setFrontDoorCompletions] = useState<number[]>([]);
 
   const firstTask = useMemo(() => {
     if (!session) return null;
@@ -151,6 +152,13 @@ function App() {
       tag: shortTag(t.tag),
       body: t.body,
     };
+  }, [session?.current_phase, session?.energy, session?.stress, session?.cycle_phase_name]);
+
+  const allTaskShortTitles = useMemo(() => {
+    if (!session) return [];
+    const shortTag = (tag: string) => tag.split('·')[1]?.trim() || tag;
+    return dailyTasks(session.current_phase, session.energy, session.stress, session.cycle_phase_name)
+      .map((t) => (t as any).shortTitle || shortTag(t.tag));
   }, [session?.current_phase, session?.energy, session?.stress, session?.cycle_phase_name]);
 
   useEffect(() => {
@@ -280,6 +288,9 @@ function App() {
     setAllMastery(mastery);
     setMasteryLoaded(true);
 
+    // Check if any tasks were completed in Front Door today
+    fetchFrontDoorCompletions(userId).then(setFrontDoorCompletions).catch(() => {});
+
     // Compute daily save streak and days-since-last-save
     const ninetyDaysAgo = new Date();
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
@@ -330,6 +341,8 @@ function App() {
     if (resolvedSession) {
       const _syncPhase = PROTOCOL.phases.find((p) => p.id === resolvedSession!.current_phase);
       const _syncTasks = dailyTasks(resolvedSession!.current_phase, resolvedSession!.energy, resolvedSession!.stress, resolvedSession!.cycle_phase_name);
+      const _syncShortTag = (tag: string) => tag.split('·')[1]?.trim() || tag;
+      const _syncTaskTitles = _syncTasks.map((t) => (t as any).shortTitle || _syncShortTag(t.tag));
       syncToFrontDoor({
         userId,
         protocolPhase: resolvedSession!.current_phase,
@@ -342,7 +355,7 @@ function App() {
         tasksComplete: localTaskCounts.complete,
         tasksTotal: localTaskCounts.total,
         protocolComplete: resolvedSession!.protocol_complete ?? false,
-        priorityTaskTitle: (_syncTasks[0] as any)?.shortTitle ?? null,
+        taskShortTitles: _syncTaskTitles,
       }).catch(() => {});
     }
   };
@@ -371,6 +384,7 @@ function App() {
     if (data && (field === 'energy' || field === 'stress')) {
       const _syncPhase = PROTOCOL.phases.find((p) => p.id === data.current_phase);
       const _syncTasks = dailyTasks(data.current_phase, data.energy, data.stress, data.cycle_phase_name);
+      const _syncShortTag = (tag: string) => tag.split('·')[1]?.trim() || tag;
       syncToFrontDoor({
         userId: user.id,
         protocolPhase: data.current_phase,
@@ -383,7 +397,7 @@ function App() {
         tasksComplete: todayTaskCounts.complete,
         tasksTotal: todayTaskCounts.total,
         protocolComplete: data.protocol_complete ?? false,
-        priorityTaskTitle: (_syncTasks[0] as any)?.shortTitle ?? null,
+        taskShortTitles: _syncTasks.map((t) => (t as any).shortTitle || _syncShortTag(t.tag)),
       }).catch(() => {});
     }
   };
@@ -441,7 +455,7 @@ function App() {
       tasksComplete,
       tasksTotal,
       protocolComplete: session.protocol_complete ?? false,
-      priorityTaskTitle: firstTask?.shortTitle ?? null,
+      taskShortTitles: allTaskShortTitles,
     }).catch(() => {});
     setDaysSinceLastSave(0);
     setDailyStreak((prev) => (prev === 0 ? 1 : prev));
@@ -716,6 +730,7 @@ function App() {
               onPhaseComplete={handlePhaseComplete}
               dailyStreak={dailyStreak}
               daysSinceLastSave={daysSinceLastSave}
+              frontDoorCompletions={frontDoorCompletions}
             />
           )}
           {view === 'body' && (

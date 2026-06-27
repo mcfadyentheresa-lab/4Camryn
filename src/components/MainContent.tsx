@@ -40,6 +40,7 @@ interface MainContentProps {
   onPhaseComplete?: (phase: number) => void;
   dailyStreak?: number;
   daysSinceLastSave?: number | null;
+  frontDoorCompletions?: number[];
 }
 
 function questIdFromTag(tag: string): string | null {
@@ -81,6 +82,7 @@ export default function MainContent({
   onPhaseComplete,
   dailyStreak = 0,
   daysSinceLastSave = null,
+  frontDoorCompletions = [],
 }: MainContentProps) {
   const [checkedItems, setCheckedItems] = useState<boolean[]>(() => [false, false, false]);
   const [expanded, setExpanded] = useState<number | null>(null);
@@ -91,6 +93,7 @@ export default function MainContent({
   const [currentSlot, setCurrentSlot] = useState(() => getTaskSlot(new Date().getHours()));
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedRef = useRef(false);
+  const frontDoorApplied = useRef(false);
 
   // Re-evaluate time slot every minute
   useEffect(() => {
@@ -209,6 +212,26 @@ export default function MainContent({
       const qs = masteryData.quests[questId];
       return qs ? isTodayCompleted(qs.completedDates) : false;
     });
+
+    // Apply completions from Front Door (once per session load)
+    if (frontDoorCompletions.length > 0 && !frontDoorApplied.current) {
+      frontDoorApplied.current = true;
+      let newCompletions = 0;
+      frontDoorCompletions.forEach((idx) => {
+        if (idx >= 0 && idx < tasks.length && !derived[idx]) {
+          derived[idx] = true;
+          newCompletions++;
+          const questId = questIdFromTag(tasks[idx]?.tag || '');
+          if (questId) autoMarkQuest(questId, true);
+          autoMarkQuest('daily-checkin', true);
+        }
+      });
+      if (newCompletions > 0) {
+        const doneCount = derived.filter(Boolean).length;
+        onSaveDay(doneCount, 3);
+      }
+    }
+
     setCheckedItems(derived);
     if (derived.every(Boolean)) setShowCelebration(true);
     else setShowCelebration(false);
