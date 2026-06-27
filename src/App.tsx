@@ -124,7 +124,7 @@ function App() {
   const [view, setView] = useState<AppView>(() => {
     const saved = localStorage.getItem('camryn_view');
     const valid: AppView[] = ['today', 'body', 'food', 'confidence', 'space', 'journal', 'loves', 'profile'];
-    return (saved && valid.includes(saved as AppView)) ? (saved as AppView) : 'journal';
+    return (saved && valid.includes(saved as AppView)) ? (saved as AppView) : 'today';
   });
   const handleViewChange = (v: AppView) => { setView(v); localStorage.setItem('camryn_view', v); };
   const [phaseProgress, setPhaseProgress] = useState(0);
@@ -526,7 +526,10 @@ function App() {
       .eq('user_id', user.id)
       .select()
       .maybeSingle();
-    if (updated) setSession(updated as Session);
+    if (updated) {
+      setSession(updated as Session);
+      handleViewChange('today');
+    }
   };
 
   const handlePhaseComplete = (completedPhase: number) => {

@@ -12,6 +12,7 @@ import {
   type MasteryData,
   type AllPhaseMastery,
 } from '../lib/mastery';
+import { getDailyCoachingSentence, getPhasePosition } from '../lib/dailyCoaching';
 import MasteryCard from './MasteryCard';
 import CycleActionTile from './CycleActionTile';
 import WeeklyFocusCard from './WeeklyFocusCard';
@@ -308,6 +309,26 @@ export default function MainContent({
           <span className="streak-label">Keep it going</span>
         </div>
       )}
+
+      {/* ── Phase position strip + Camryn daily sentence ── */}
+      {(() => {
+        const pos = getPhasePosition(session.save_count, session.current_phase);
+        const sentence = getDailyCoachingSentence(session.cycle_phase_name, session.current_phase);
+        const phaseData = PROTOCOL.phases.find((p) => p.id === session.current_phase);
+        return (
+          <div className="phase-strip">
+            <div className="phase-strip-meta">
+              <span className="phase-strip-name">
+                Phase {session.current_phase} · {phaseData?.name}
+              </span>
+              <span className="phase-strip-position">
+                Day {pos.dayInPhase} · Week {pos.weekInPhase} of {pos.totalWeeksInPhase}
+              </span>
+            </div>
+            <p className="phase-strip-sentence">{sentence}</p>
+          </div>
+        );
+      })()}
 
       <div className="tasks-card">
         <WeeklyFocusCard
