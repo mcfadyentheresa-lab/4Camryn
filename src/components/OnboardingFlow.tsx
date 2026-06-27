@@ -314,11 +314,6 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                       <div className="ob-feature-body">{f.body}</div>
                     )}
                   </div>
-                  {featureIdx === i && (
-                    <svg className="ob-feature-arrow" width="14" height="14" viewBox="0 0 14 14" fill="none">
-                      <path d="M7 2l5 5-5 5M2 7h10" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  )}
                 </button>
               ))}
             </div>
