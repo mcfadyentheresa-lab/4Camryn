@@ -209,6 +209,8 @@ export default function MainContent({
       return qs ? isTodayCompleted(qs.completedDates) : false;
     });
     setCheckedItems(derived);
+    if (derived.every(Boolean)) setShowCelebration(true);
+    else setShowCelebration(false);
     savedRef.current = false;
   }, [session.current_phase, masteryData]); // eslint-disable-line react-hooks/exhaustive-deps
 
