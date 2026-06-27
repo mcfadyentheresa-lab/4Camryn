@@ -481,18 +481,52 @@
   transition: width 0.4s ease;
 }
 
-/* ── Tasks complete celebration ──────────────────── */
-.tasks-footer--celebrate {
-  background: var(--sand);
-  transition: background 0.4s ease;
+/* ── Persistent day-complete state ───────────────── */
+.tasks-complete-state {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 18px 16px;
+  border-top: 1px solid var(--line);
+  animation: fade-up-in 0.35s ease;
 }
 
-.tasks-complete-label {
-  font-size: 0.78rem;
+.tasks-complete-check {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+}
+
+.tasks-complete-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.tasks-complete-headline {
+  margin: 0;
+  font-size: 0.88rem;
   font-weight: 600;
-  color: var(--accent);
-  white-space: nowrap;
-  animation: fade-up-in 0.3s ease;
+  color: var(--ink);
+}
+
+.tasks-complete-streak {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.tasks-complete-note {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+  font-style: italic;
 }
 
 @keyframes fade-up-in {

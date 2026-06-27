@@ -168,10 +168,9 @@ export default function MainContent({
         savedRef.current = true;
       }
 
-      // Celebrate when all 3 done
+      // Enter persistent completion state when all 3 are done
       if (doneCount === 3 && !prev.every(Boolean)) {
         setTimeout(() => setShowCelebration(true), 200);
-        setTimeout(() => setShowCelebration(false), 3200);
       }
 
       return next;
@@ -435,16 +434,35 @@ export default function MainContent({
           );
         })}
 
-        {/* Slim progress strip — no save button */}
-        <div className={`tasks-footer ${showCelebration ? 'tasks-footer--celebrate' : ''}`}>
-          <span className="progress-text">{checkedItems.filter(Boolean).length}/3</span>
-          <div className="progress-bar">
-            <div className="progress-bar-fill" style={{ width: `${(checkedItems.filter(Boolean).length / 3) * 100}%` }} />
+        {/* Footer: progress bar while incomplete, persistent completion state when all 3 done */}
+        {showCelebration ? (
+          <div className="tasks-complete-state">
+            <div className="tasks-complete-check">
+              <svg width="14" height="11" viewBox="0 0 14 11" fill="none">
+                <path d="M1.5 5.5L5.5 9.5L12.5 1.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <div className="tasks-complete-body">
+              <p className="tasks-complete-headline">
+                Day {session.save_count} done
+                {dailyStreak >= 2
+                  ? <span className="tasks-complete-streak"> · {dailyStreak} days in a row</span>
+                  : dailyStreak === 1
+                    ? <span className="tasks-complete-streak"> · First day</span>
+                    : null
+                }
+              </p>
+              <p className="tasks-complete-note">That's what the protocol is. One day at a time.</p>
+            </div>
           </div>
-          {showCelebration && (
-            <span className="tasks-complete-label">Day done ✓</span>
-          )}
-        </div>
+        ) : (
+          <div className="tasks-footer">
+            <span className="progress-text">{checkedItems.filter(Boolean).length}/3</span>
+            <div className="progress-bar">
+              <div className="progress-bar-fill" style={{ width: `${(checkedItems.filter(Boolean).length / 3) * 100}%` }} />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Nearest mastery nudge ── */}
