@@ -1,11 +1,7 @@
 // Database types for 4Camryn (Supabase project: xhdipmbdrcxnbutrjmhc)
-// Status: VERIFIED AGAINST LIVE SCHEMA — 2026-06-23
+// Status: VERIFIED AGAINST LIVE SCHEMA — 2026-06-27
 // Source: information_schema.columns query against live DB + migration cross-reference
 // Notes:
-//   - camryn_exercise: does NOT exist in the live DB; type retained below as a stub for app
-//     code in BodySection.tsx that references it — that code will fail at runtime until the
-//     table is created via migration
-//   - camryn_products: present in live DB; added below
 //   - camryn_state / daily_items: FrontDoor cross-project tables; kept in camrynSyncService.ts
 //     which uses its own untyped client — intentionally excluded here
 
@@ -660,9 +656,8 @@ export interface Database {
         Relationships: []
       }
 
-      // NOTE: camryn_exercise does NOT exist in the live DB.
-      // This type stub is kept to prevent immediate compile errors in BodySection.tsx.
-      // A migration must be created before any writes to this table will succeed at runtime.
+      // camryn_exercise: created via migration create_camryn_exercise.
+      // Columns match actual app usage in BodySection.tsx.
       camryn_exercise: {
         Row: {
           id: string
