@@ -59,7 +59,7 @@ export default function Header({ syncDot = 'idle', onSignOut, view, onViewChange
                 <>
                   <div className="me-menu-backdrop" onClick={() => setShowMe(false)} />
                   <div className="me-menu">
-                    {(['profile', 'journal', 'body', 'food', 'confidence', 'space', 'loves'] as AppView[]).map((v) => (
+                    {(['today', 'profile', 'journal', 'body', 'food', 'confidence', 'space', 'loves'] as AppView[]).map((v) => (
                       <button
                         key={v}
                         className={`me-menu-item ${view === v ? 'active' : ''}`}
