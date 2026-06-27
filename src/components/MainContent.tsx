@@ -284,21 +284,35 @@ export default function MainContent({
     <div className="today-single">
 
       {/* ── Comeback card — shown when 2+ days without saving ── */}
-      {daysSinceLastSave !== null && daysSinceLastSave >= 2 && (
-        <div className="comeback-card">
-          <div className="comeback-card-left">
-            <span className="comeback-card-days">{daysSinceLastSave}d</span>
+      {daysSinceLastSave !== null && daysSinceLastSave >= 2 && (() => {
+        const phaseName = PROTOCOL.phases.find((p) => p.id === session.current_phase)?.name ?? 'Foundation';
+        const dayN = session.save_count ?? 0;
+        let title: string;
+        let text: string;
+
+        if (daysSinceLastSave <= 3) {
+          title = `You were gone for ${daysSinceLastSave} days. No lecture.`;
+          text = `You're still on Day ${dayN} of Phase ${session.current_phase} — ${phaseName}. Same tasks, same protocol. Pick one and start there.`;
+        } else if (daysSinceLastSave <= 7) {
+          title = `It's been ${daysSinceLastSave} days.`;
+          text = `You're still exactly where you left off — Day ${dayN}, Phase ${session.current_phase} (${phaseName}). Nothing resets. Open the first task. That's the only action right now.`;
+        } else {
+          title = 'Welcome back.';
+          text = `You took a break. The protocol was waiting. You're still on Day ${dayN} of Phase ${session.current_phase} — ${phaseName}. Gaps don't erase days. They just pause them.`;
+        }
+
+        return (
+          <div className="comeback-card">
+            <div className="comeback-card-left">
+              <span className="comeback-card-days">{daysSinceLastSave}d</span>
+            </div>
+            <div className="comeback-card-body">
+              <p className="comeback-card-title">{title}</p>
+              <p className="comeback-card-text">{text}</p>
+            </div>
           </div>
-          <div className="comeback-card-body">
-            <p className="comeback-card-title">Good to have you back</p>
-            <p className="comeback-card-text">
-              {daysSinceLastSave <= 4
-                ? "Small gaps happen. Today counts — pick one task and build from there."
-                : "It's been a while. No pressure — just open the first task and start where you are."}
-            </p>
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ── Streak banner — shown when streak ≥ 2 and no gap ── */}
       {dailyStreak >= 2 && (daysSinceLastSave === null || daysSinceLastSave <= 1) && (
