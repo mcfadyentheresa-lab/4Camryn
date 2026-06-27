@@ -47,6 +47,7 @@ interface Session {
   energy: string;
   stress: string;
   save_count: number;
+  phase_start_save_count: number;
   display_name: string | null;
   onboarding_complete: boolean;
   protocol_complete: boolean;
@@ -560,7 +561,7 @@ function App() {
 
     const { data } = await supabase
       .from('camryn_sessions')
-      .update({ current_phase: nextPhase })
+      .update({ current_phase: nextPhase, phase_start_save_count: session.save_count })
       .eq('user_id', user.id)
       .select()
       .maybeSingle();

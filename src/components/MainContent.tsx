@@ -25,6 +25,7 @@ interface Session {
   energy: string;
   stress: string;
   save_count: number;
+  phase_start_save_count: number;
 }
 
 interface MainContentProps {
@@ -327,7 +328,7 @@ export default function MainContent({
 
       {/* ── Phase position strip + Camryn daily sentence ── */}
       {(() => {
-        const pos = getPhasePosition(session.save_count, session.current_phase);
+        const pos = getPhasePosition(session.save_count, session.current_phase, session.phase_start_save_count ?? 0);
         const sentence = getDailyCoachingSentence(session.cycle_phase_name, session.current_phase);
         const phaseData = PROTOCOL.phases.find((p) => p.id === session.current_phase);
         return (

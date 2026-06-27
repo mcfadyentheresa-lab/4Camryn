@@ -159,14 +159,21 @@ export interface PhasePosition {
   totalWeeksInPhase: number;
 }
 
-export function getPhasePosition(saveCount: number, protocolPhase: number): PhasePosition {
+export function getPhasePosition(
+  saveCount: number,
+  protocolPhase: number,
+  phaseStartSaveCount = 0,
+): PhasePosition {
   const span = PHASE_WEEK_SPANS[protocolPhase] ?? PHASE_WEEK_SPANS[1];
   const totalDaysInPhase = span.totalWeeks * 7;
-  // saveCount is the total days shown up ever; for the strip we only want days in
-  // the current phase. We don't track per-phase save counts separately, so we
-  // use saveCount directly as a proxy — it resets to a running total but is our
-  // best signal for "days you've been active". Cap to total phase days.
-  const dayInPhase = Math.min(Math.max(saveCount, 1), totalDaysInPhase);
+  // Days relative to when the user entered this phase.
+  // For existing users where phaseStartSaveCount is 0 (column defaulted) and
+  // protocolPhase > 1, we fall back to a 1-based floor so the strip shows
+  // something sensible rather than a large incorrect number.
+  const relative = phaseStartSaveCount > 0 || protocolPhase === 1
+    ? Math.max(saveCount - phaseStartSaveCount, 1)
+    : 1;
+  const dayInPhase = Math.min(relative, totalDaysInPhase);
   const weekInPhase = Math.min(Math.ceil(dayInPhase / 7), span.totalWeeks);
   return { dayInPhase, weekInPhase, totalWeeksInPhase: span.totalWeeks };
 }

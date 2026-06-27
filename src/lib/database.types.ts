@@ -24,6 +24,7 @@ export interface Database {
           energy: string
           stress: string
           save_count: number
+          phase_start_save_count: number
           display_name: string | null
           onboarding_complete: boolean
           protocol_complete: boolean
@@ -47,6 +48,7 @@ export interface Database {
           energy?: string
           stress?: string
           save_count?: number
+          phase_start_save_count?: number
           display_name?: string | null
           onboarding_complete?: boolean
           protocol_complete?: boolean
@@ -70,6 +72,7 @@ export interface Database {
           energy?: string
           stress?: string
           save_count?: number
+          phase_start_save_count?: number
           display_name?: string | null
           onboarding_complete?: boolean
           protocol_complete?: boolean
