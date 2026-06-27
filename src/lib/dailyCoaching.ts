@@ -170,3 +170,92 @@ export function getPhasePosition(saveCount: number, protocolPhase: number): Phas
   const weekInPhase = Math.min(Math.ceil(dayInPhase / 7), span.totalWeeks);
   return { dayInPhase, weekInPhase, totalWeeksInPhase: span.totalWeeks };
 }
+
+// Short completion notes shown in the persistent day-done state.
+// Different tone from the coaching sentence: landing, not orienting.
+const COMPLETION_CYCLE: SentenceBank = {
+  follicular: [
+    'Good use of a strong day.',
+    'Your body was ready. You delivered.',
+    'Follicular energy put to work. Well done.',
+  ],
+  ovulation: [
+    'Peak window, used well.',
+    "That's what your best days are for.",
+    'You made something happen. That counts.',
+  ],
+  'early luteal': [
+    'Steady work in a steady phase.',
+    'Focused and done. Exactly right.',
+    'The phase gave you concentration. You used it.',
+  ],
+  'late luteal': [
+    'Showing up here is harder than it looks.',
+    'The hardest version of showing up still counts fully.',
+    'You did the work in the hardest window. That matters.',
+  ],
+  menstruation: [
+    'You kept the minimum alive. Rest now.',
+    'The bar was lower today, intentionally. You cleared it.',
+    'Gentle and done. That was the protocol.',
+  ],
+};
+
+const COMPLETION_PHASE: Record<number, string[]> = {
+  1: [
+    'Foundation, one more day deeper.',
+    'Small consistent days compound quietly.',
+    'The invisible work is still work.',
+  ],
+  2: [
+    'Ignition days add up. This one did.',
+    'Traction builds from days exactly like this.',
+    'Phase 2 is moving. So are you.',
+  ],
+  3: [
+    "You're shaping something. Keep going.",
+    'Build phase, another day placed.',
+    'The work is cumulative. Today contributed.',
+  ],
+};
+
+const COMPLETION_FALLBACK = [
+  'Done. That is the whole protocol.',
+  'One day at a time. Today is done.',
+  'That is all it takes. Show up, do the work.',
+  'Small day, real progress.',
+];
+
+const COMPLETION_CACHE_KEY = 'camryn_completion_note';
+
+export function getCompletionNote(cyclePhase: string, protocolPhase: number): string {
+  const today = new Date().toISOString().split('T')[0];
+
+  try {
+    const raw = localStorage.getItem(COMPLETION_CACHE_KEY);
+    if (raw) {
+      const cached: CachedSentence = JSON.parse(raw);
+      if (cached.date === today) return cached.sentence;
+    }
+  } catch { /* ignore */ }
+
+  const cycleKey = matchCycleKey(cyclePhase);
+  let candidates: string[];
+
+  if (cycleKey && COMPLETION_CYCLE[cycleKey]?.length) {
+    candidates = COMPLETION_CYCLE[cycleKey];
+  } else if (COMPLETION_PHASE[protocolPhase]?.length) {
+    candidates = COMPLETION_PHASE[protocolPhase];
+  } else {
+    candidates = COMPLETION_FALLBACK;
+  }
+
+  const salt = `completion:${cyclePhase}:${protocolPhase}`;
+  const sentence = pickForDay(candidates, today, salt);
+
+  try {
+    localStorage.setItem(COMPLETION_CACHE_KEY, JSON.stringify({ date: today, sentence }));
+  } catch { /* ignore */ }
+
+  return sentence;
+}

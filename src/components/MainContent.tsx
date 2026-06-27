@@ -12,7 +12,7 @@ import {
   type MasteryData,
   type AllPhaseMastery,
 } from '../lib/mastery';
-import { getDailyCoachingSentence, getPhasePosition } from '../lib/dailyCoaching';
+import { getDailyCoachingSentence, getCompletionNote, getPhasePosition } from '../lib/dailyCoaching';
 import MasteryCard from './MasteryCard';
 import CycleActionTile from './CycleActionTile';
 import WeeklyFocusCard from './WeeklyFocusCard';
@@ -468,7 +468,7 @@ export default function MainContent({
                     : null
                 }
               </p>
-              <p className="tasks-complete-note">That's what the protocol is. One day at a time.</p>
+              <p className="tasks-complete-note">{getCompletionNote(session.cycle_phase_name, session.current_phase)}</p>
             </div>
           </div>
         ) : (
