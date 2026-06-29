@@ -72,6 +72,12 @@ function getSlotLabel(slot: number): string {
 }
 
 
+// Returns today's local date as YYYY-MM-DD, matching the same convention as mastery.ts.
+function localToday(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 export default function MainContent({
   userId,
   session,
@@ -91,13 +97,18 @@ export default function MainContent({
   const [showCelebration, setShowCelebration] = useState(false);
   // Time slot tracks which tasks are "unlocked" — updates every minute
   const [currentSlot, setCurrentSlot] = useState(() => getTaskSlot(new Date().getHours()));
+  // todayKey drives a re-derivation of checkedItems when the calendar day changes.
+  // This ensures accumulation tasks reset to unchecked at midnight rather than
+  // carrying forward the previous day's checked state.
+  const [todayKey, setTodayKey] = useState(localToday);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedRef = useRef(false);
 
-  // Re-evaluate time slot every minute
+  // Re-evaluate time slot every minute; also poll for date change at midnight
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentSlot(getTaskSlot(new Date().getHours()));
+      setTodayKey(localToday());
     }, 60_000);
     return () => clearInterval(interval);
   }, []);
@@ -205,6 +216,8 @@ export default function MainContent({
   }, [masteryData.pickId]);
 
   useEffect(() => {
+    // Accumulation tasks reset visually each day unless completed again today;
+    // progress is based on dated completion history, not a carry-forward boolean.
     const derived = tasks.map((task) => {
       const questId = questIdFromTag(task.tag);
       if (!questId) return false;
@@ -216,7 +229,7 @@ export default function MainContent({
     if (derived.every(Boolean)) setShowCelebration(true);
     else setShowCelebration(false);
     savedRef.current = false;
-  }, [session.current_phase, masteryData]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [session.current_phase, masteryData, todayKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Apply completions from Front Door whenever the list updates (real-time or on load)
   useEffect(() => {

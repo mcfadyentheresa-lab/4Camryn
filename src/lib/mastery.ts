@@ -125,14 +125,30 @@ export const PHASE_QUESTS: Record<number, Quest[]> = {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+// Returns today's local date as YYYY-MM-DD.
+// Uses local time rather than UTC so midnight rolls over with the user's clock,
+// not at a UTC offset that may fall in the middle of their afternoon or evening.
+function localToday(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 function prevDay(dateStr: string): string {
-  const d = new Date(dateStr + 'T12:00:00');
+  // Parse at noon local time to avoid any DST boundary edge cases.
+  const [y, m, dayN] = dateStr.split('-').map(Number);
+  const d = new Date(y, m - 1, dayN, 12, 0, 0);
   d.setDate(d.getDate() - 1);
-  return d.toISOString().split('T')[0];
+  const py = d.getFullYear();
+  const pm = String(d.getMonth() + 1).padStart(2, '0');
+  const pd = String(d.getDate()).padStart(2, '0');
+  return `${py}-${pm}-${pd}`;
 }
 
 export function calcStreak(completedDates: string[], targetDays: number): number {
-  const today = new Date().toISOString().split('T')[0];
+  const today = localToday();
   const sorted = [...completedDates].sort().reverse();
   let streak = 0;
   let cursor = today;
@@ -148,13 +164,14 @@ export function calcStreak(completedDates: string[], targetDays: number): number
   return streak;
 }
 
+// Accumulation tasks reset visually each day unless completed again today;
+// progress is based on dated completion history, not a carry-forward boolean.
 export function isTodayCompleted(completedDates: string[]): boolean {
-  const today = new Date().toISOString().split('T')[0];
-  return completedDates.includes(today);
+  return completedDates.includes(localToday());
 }
 
 export function toggleToday(completedDates: string[]): string[] {
-  const today = new Date().toISOString().split('T')[0];
+  const today = localToday();
   return completedDates.includes(today)
     ? completedDates.filter((d) => d !== today)
     : [...completedDates, today];
@@ -277,7 +294,7 @@ export function chooseDailyPick(data: MasteryData, quests: Quest[], totalDaysCom
 }
 
 export function ensureDailyPick(data: MasteryData, quests: Quest[]): MasteryData {
-  const today = new Date().toISOString().split('T')[0];
+  const today = localToday();
   if (data.pickDate === today && data.pickId) return data;
 
   const totalDone = Object.values(data.quests).reduce(
