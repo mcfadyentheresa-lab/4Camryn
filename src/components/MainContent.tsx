@@ -33,7 +33,7 @@ interface MainContentProps {
   session: Session;
   allMastery: AllPhaseMastery;
   onAllMasteryChange: (updated: AllPhaseMastery) => void;
-  onSaveDay: (complete: number, total: number) => void;
+  onSaveDay: (complete: number, total: number, checkedItems?: boolean[]) => void;
   onNavigateToJournal?: () => void;
   onNavigateTo?: (view: string) => void;
   onPhaseProgressChange?: (pct: number) => void;
@@ -93,7 +93,6 @@ export default function MainContent({
   const [currentSlot, setCurrentSlot] = useState(() => getTaskSlot(new Date().getHours()));
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedRef = useRef(false);
-  const frontDoorApplied = useRef(false);
 
   // Re-evaluate time slot every minute
   useEffect(() => {
@@ -168,7 +167,7 @@ export default function MainContent({
       const doneCount = next.filter(Boolean).length;
       if (!savedRef.current || doneCount > 0) {
         autoMarkQuest('daily-checkin', true);
-        onSaveDay(doneCount, 3);
+        onSaveDay(doneCount, 3, next);
         savedRef.current = true;
       }
 
@@ -213,30 +212,35 @@ export default function MainContent({
       return qs ? isTodayCompleted(qs.completedDates) : false;
     });
 
-    // Apply completions from Front Door (once per session load)
-    if (frontDoorCompletions.length > 0 && !frontDoorApplied.current) {
-      frontDoorApplied.current = true;
-      let newCompletions = 0;
-      frontDoorCompletions.forEach((idx) => {
-        if (idx >= 0 && idx < tasks.length && !derived[idx]) {
-          derived[idx] = true;
-          newCompletions++;
-          const questId = questIdFromTag(tasks[idx]?.tag || '');
-          if (questId) autoMarkQuest(questId, true);
-          autoMarkQuest('daily-checkin', true);
-        }
-      });
-      if (newCompletions > 0) {
-        const doneCount = derived.filter(Boolean).length;
-        onSaveDay(doneCount, 3);
-      }
-    }
-
     setCheckedItems(derived);
     if (derived.every(Boolean)) setShowCelebration(true);
     else setShowCelebration(false);
     savedRef.current = false;
   }, [session.current_phase, masteryData]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Apply completions from Front Door whenever the list updates (real-time or on load)
+  useEffect(() => {
+    if (frontDoorCompletions.length === 0) return;
+    setCheckedItems((prev) => {
+      const next = [...prev];
+      let changed = false;
+      frontDoorCompletions.forEach((idx) => {
+        if (idx >= 0 && idx < tasks.length && !next[idx]) {
+          next[idx] = true;
+          changed = true;
+          const questId = questIdFromTag(tasks[idx]?.tag || '');
+          if (questId) autoMarkQuest(questId, true);
+          autoMarkQuest('daily-checkin', true);
+        }
+      });
+      if (changed) {
+        const doneCount = next.filter(Boolean).length;
+        onSaveDay(doneCount, 3, next);
+        if (next.every(Boolean)) setShowCelebration(true);
+      }
+      return changed ? next : prev;
+    });
+  }, [frontDoorCompletions]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const pct = calcProgressPct(masteryData, quests);

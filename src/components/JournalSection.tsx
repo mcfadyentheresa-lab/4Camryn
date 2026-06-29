@@ -849,7 +849,7 @@ export default function JournalSection({ userId, session, focusInput, displayNam
             value={text}
             onChange={autoResize}
             onKeyDown={handleKeyDown}
-            placeholder={isRecording ? 'Listening…' : 'iMessage'}
+            placeholder={isRecording ? 'Listening…' : 'Message Camryn…'}
             disabled={sending}
           />
           {speechSupported && (

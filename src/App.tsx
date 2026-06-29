@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { supabase } from './lib/supabase';
 import { PROTOCOL, dayOfCycleFromDate, phaseFromDay, dailyTasks } from './lib/protocol';
 import {
@@ -25,7 +25,7 @@ import NotificationBanner from './components/NotificationBanner';
 import MorningNudgePrompt from './components/MorningNudgePrompt';
 import LovesSection from './components/LovesSection';
 import './App.css';
-import { syncToFrontDoor, fetchFrontDoorCompletions } from './services/camrynSyncService';
+import { syncToFrontDoor, fetchFrontDoorCompletions, subscribeFrontDoorCompletions } from './services/camrynSyncService';
 
 // Register service worker for push notifications
 if ('serviceWorker' in navigator) {
@@ -140,6 +140,7 @@ function App() {
   const [daysSinceLastSave, setDaysSinceLastSave] = useState<number | null>(null);
   const [todayTaskCounts, setTodayTaskCounts] = useState<{ complete: number; total: number }>({ complete: 0, total: 0 });
   const [frontDoorCompletions, setFrontDoorCompletions] = useState<number[]>([]);
+  const frontDoorChannelRef = useRef<ReturnType<typeof subscribeFrontDoorCompletions> | null>(null);
 
   const firstTask = useMemo(() => {
     if (!session) return null;
@@ -288,8 +289,12 @@ function App() {
     setAllMastery(mastery);
     setMasteryLoaded(true);
 
-    // Check if any tasks were completed in Front Door today
+    // Check if any tasks were completed in Front Door today, then subscribe for real-time updates
     fetchFrontDoorCompletions(userId).then(setFrontDoorCompletions).catch(() => {});
+    if (frontDoorChannelRef.current) {
+      frontDoorChannelRef.current.unsubscribe();
+    }
+    frontDoorChannelRef.current = subscribeFrontDoorCompletions(userId, setFrontDoorCompletions);
 
     // Compute daily save streak and days-since-last-save
     const ninetyDaysAgo = new Date();
@@ -412,7 +417,7 @@ function App() {
     }
   };
 
-  const handleSaveDay = async (tasksComplete: number, tasksTotal: number) => {
+  const handleSaveDay = async (tasksComplete: number, tasksTotal: number, checkedItems?: boolean[]) => {
     if (!user || !session) return;
 
     const today = new Date().toISOString().split('T')[0];
@@ -456,6 +461,7 @@ function App() {
       tasksTotal,
       protocolComplete: session.protocol_complete ?? false,
       taskShortTitles: allTaskShortTitles,
+      checkedItems,
     }).catch(() => {});
     setDaysSinceLastSave(0);
     setDailyStreak((prev) => (prev === 0 ? 1 : prev));
