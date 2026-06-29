@@ -708,7 +708,6 @@ function App() {
           onThemeToggle={() => setTheme(theme === 'light' ? 'dark' : 'light')}
           saveStatus={saveStatus}
           syncDot={syncDot}
-          onSignOut={() => { /* no-op: no login page */ }}
           view={view}
           onViewChange={handleViewChange}
           currentPhase={session.current_phase}

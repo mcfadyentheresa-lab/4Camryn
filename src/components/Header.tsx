@@ -9,7 +9,6 @@ interface HeaderProps {
   onThemeToggle?: () => void;
   saveStatus?: string;
   syncDot?: 'synced' | 'saving' | 'idle';
-  onSignOut: () => void;
   view: AppView;
   onViewChange: (view: AppView) => void;
   currentPhase?: number;
@@ -17,7 +16,7 @@ interface HeaderProps {
   dayCount?: number;
 }
 
-export default function Header({ syncDot = 'idle', onSignOut, view, onViewChange, currentPhase, displayName, dayCount }: HeaderProps) {
+export default function Header({ syncDot = 'idle', view, onViewChange, currentPhase, displayName, dayCount }: HeaderProps) {
   const [showProtocol, setShowProtocol] = useState(false);
   const [showMe, setShowMe] = useState(false);
 
@@ -68,8 +67,6 @@ export default function Header({ syncDot = 'idle', onSignOut, view, onViewChange
                         {v.charAt(0).toUpperCase() + v.slice(1)}
                       </button>
                     ))}
-                    <div className="me-menu-divider" />
-                    <button className="me-menu-item me-menu-item--muted" onClick={onSignOut}>Sign out</button>
                   </div>
                 </>
               )}
