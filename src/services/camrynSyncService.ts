@@ -1,5 +1,10 @@
 import { createClient, RealtimeChannel } from '@supabase/supabase-js';
 
+function localToday(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL as string,
   import.meta.env.VITE_SUPABASE_ANON_KEY as string,
@@ -41,7 +46,7 @@ async function upsertCamrynState(p: CamrynSyncPayload) {
 
 export async function upsertChatTask(userId: string, title: string, energy: string): Promise<void> {
   try {
-    const today = new Date().toISOString().split('T')[0];
+    const today = localToday();
     const sourceId = `camryn-chat-${userId.slice(0, 8)}-${today}`;
     const { data: existing } = await supabase.from('daily_items').select('id, completion_state').eq('source_id', sourceId).maybeSingle();
     if (existing) {
@@ -56,7 +61,7 @@ export async function upsertChatTask(userId: string, title: string, energy: stri
 }
 
 async function upsertDailyItems(taskShortTitles: string[], energy: string, userId: string, checkedItems?: boolean[]) {
-  const today = new Date().toISOString().split('T')[0];
+  const today = localToday();
   const energyFit = energy === 'High' ? 'high' : energy === 'Low' ? 'low' : 'medium';
 
   await Promise.all(taskShortTitles.slice(0, 3).map(async (title, idx) => {
@@ -65,11 +70,9 @@ async function upsertDailyItems(taskShortTitles: string[], energy: string, userI
     const { data: existing } = await supabase.from('daily_items').select('id, completion_state').eq('source_id', sourceId).maybeSingle();
 
     if (existing) {
-      // If Camryn just checked this off, write it to Front Door
       if (isChecked && existing.completion_state === 'pending') {
         await supabase.from('daily_items').update({ completion_state: 'done', updated_at: new Date().toISOString() }).eq('id', existing.id);
       } else if (!isChecked && existing.completion_state === 'pending') {
-        // Update title only when still pending
         await supabase.from('daily_items').update({ title, updated_at: new Date().toISOString() }).eq('id', existing.id);
       }
       return;
@@ -88,7 +91,7 @@ async function upsertDailyItems(taskShortTitles: string[], energy: string, userI
       completion_state: isChecked ? 'done' : 'pending',
       is_hero: false,
       display_order: 40 + idx,
-      unlock_order: idx, // 0 = first, 1 = unlocks after 0 done, 2 = unlocks after 1 done
+      unlock_order: idx,
       user_id: userId,
     });
   }));
@@ -97,7 +100,7 @@ async function upsertDailyItems(taskShortTitles: string[], energy: string, userI
 // Returns the task indices (0, 1, or 2) that were completed in Front Door today.
 export async function fetchFrontDoorCompletions(userId: string): Promise<number[]> {
   try {
-    const today = new Date().toISOString().split('T')[0];
+    const today = localToday();
     const prefix = `camryn-${userId.slice(0, 8)}-${today}-`;
     const { data } = await supabase
       .from('daily_items')
@@ -120,7 +123,7 @@ export function subscribeFrontDoorCompletions(
   userId: string,
   onUpdate: (completedIndices: number[]) => void,
 ): RealtimeChannel {
-  const today = new Date().toISOString().split('T')[0];
+  const today = localToday();
   const prefix = `camryn-${userId.slice(0, 8)}-${today}-`;
 
   const channel = supabase
