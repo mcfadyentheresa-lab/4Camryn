@@ -1,14 +1,17 @@
 import { createClient, RealtimeChannel } from '@supabase/supabase-js';
 
-function localToday(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
+// Untyped client intentionally — daily_items/camryn_state are shared FrontDoor tables
+// not in database.types.ts. Uses same credentials as the main client so the Supabase
+// SDK shares the persisted auth session from localStorage.
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL as string,
   import.meta.env.VITE_SUPABASE_ANON_KEY as string,
 );
+
+function localToday(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
 export interface CamrynSyncPayload {
   userId: string;
