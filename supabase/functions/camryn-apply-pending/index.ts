@@ -1,38 +1,22 @@
 // supabase/functions/camryn-apply-pending/index.ts
 //
-// Task 5: Camryn's apply-logic. Reads camryn_pending_writes rows with
-// status='pending' and applies them.
+// Task 5 apply-logic — REVISED to add authentication.
 //
-// SCOPE DECISION, stated explicitly: this replicates only 2 of the 5
-// writes handleSaveDay performs:
-//   - camryn_daily_saves  (INCLUDED — simple upsert, safe)
-//   - camryn_sessions.save_count  (INCLUDED — simple counter increment)
-//   - camryn_unlocks      (DEFERRED — requires porting PROTOCOL mastery/
-//                          countdown logic; getting this wrong risks
-//                          corrupting real protocol progression)
-//   - daily_items          (DEFERRED — requires replicating dailyTasks()
-//                          task-title generation from phase/energy/stress;
-//                          skipping this means Front Door's own "Today
-//                          with Camryn" display won't immediately reflect
-//                          a Front-Door-initiated completion, a cosmetic
-//                          gap, not a correctness one)
-//   - camryn_state         (SKIPPED ENTIRELY — confirmed dead code, table
-//                          doesn't exist; not worth replicating a broken
-//                          write)
+// SECURITY FIX: this function previously had no auth check at all
+// (verify_jwt: false, no secret) — anyone who found its URL could invoke
+// it and process every pending row. That was tolerable while it was only
+// ever invoked manually by a developer. Now that camryn-intake calls this
+// automatically (see the trigger added to camryn-intake), it needs to be
+// closed to the public internet. Reuses CAMRYN_INTAKE_SECRET (already
+// configured in this project) rather than introducing a second secret.
 //
-// This function is NOT the same code as handleSaveDay — it's an
-// independent re-implementation of a subset of its behavior, since
-// handleSaveDay is tangled in React component state and can't be called
-// directly from a server-side function. Drift between the two is a real,
-// accepted risk of this design — if handleSaveDay's logic changes later,
-// this function needs to be updated separately, by hand.
-//
-// This function should be invoked on a schedule (e.g. Supabase cron) or
-// triggered after camryn-intake creates a new pending row — trigger
-// mechanism is a deployment decision, not decided in this file.
+// SCOPE (unchanged from the original version): only replicates
+// camryn_daily_saves and camryn_sessions.save_count. camryn_unlocks and
+// daily_items remain deliberately deferred — see the build brief.
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
+const INTAKE_SECRET = Deno.env.get('CAMRYN_INTAKE_SECRET');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
@@ -50,8 +34,11 @@ Deno.serve(async (req) => {
     return json({ error: 'method not allowed' }, 405);
   }
 
-  // Fetch all pending rows (in a solo-user deployment this is at most a
-  // handful; if this ever needs to scale, add a LIMIT and pagination).
+  const providedSecret = req.headers.get('x-camryn-intake-secret');
+  if (!INTAKE_SECRET || providedSecret !== INTAKE_SECRET) {
+    return json({ error: 'unauthorized' }, 401);
+  }
+
   const { data: pendingRows, error: fetchError } = await supabase
     .from('camryn_pending_writes')
     .select()
@@ -66,7 +53,6 @@ Deno.serve(async (req) => {
 
   for (const row of pendingRows ?? []) {
     try {
-      // 1. camryn_daily_saves — matches handleSaveDay lines 426-436
       const { data: savedRow, error: saveError } = await supabase
         .from('camryn_daily_saves')
         .upsert(
@@ -86,9 +72,6 @@ Deno.serve(async (req) => {
 
       if (saveError) throw saveError;
 
-      // 2. camryn_sessions.save_count — matches updateSessionField in
-      //    handleSaveDay line 447. Read-then-write, since there's no
-      //    atomic increment via the JS client for a dynamic column.
       const { data: currentSession, error: sessionReadError } = await supabase
         .from('camryn_sessions')
         .select('save_count')
@@ -105,13 +88,7 @@ Deno.serve(async (req) => {
 
         if (sessionWriteError) throw sessionWriteError;
       }
-      // If no session row exists yet, deliberately skip rather than
-      // guess at creating one — that's a state this app shouldn't be in
-      // for a real user, and manufacturing a session row server-side
-      // risks masking a genuine problem instead of surfacing it.
 
-      // Mark this pending write applied, with a pointer back to the
-      // real check-in it produced.
       const { error: applyError } = await supabase
         .from('camryn_pending_writes')
         .update({
@@ -127,9 +104,6 @@ Deno.serve(async (req) => {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
 
-      // Mark rejected rather than leaving it silently stuck as pending
-      // forever — this is what lets Front Door's verify polling
-      // eventually surface a real failure instead of timing out vaguely.
       await supabase
         .from('camryn_pending_writes')
         .update({ status: 'rejected' })
