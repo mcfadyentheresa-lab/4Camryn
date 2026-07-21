@@ -423,6 +423,16 @@ function App() {
     const today = new Date().toISOString().split('T')[0];
     const isComplete = tasksComplete === tasksTotal;
 
+    // Check whether today was already saved as complete before this call,
+    // so save_count only increments once per day (not on every reload/re-save).
+    const { data: existingSave } = await supabase
+      .from('camryn_daily_saves')
+      .select('is_complete')
+      .eq('user_id', user.id)
+      .eq('save_date', today)
+      .maybeSingle();
+    const wasComplete = (existingSave as any)?.is_complete ?? false;
+
     await supabase
       .from('camryn_daily_saves')
       .upsert([
@@ -444,7 +454,9 @@ function App() {
         : `Saved just now · progress paused at ${tasksComplete}/${tasksTotal}`
     );
 
-    await updateSessionField('save_count', (session.save_count || 0) + 1);
+    if (isComplete && !wasComplete) {
+      await updateSessionField('save_count', (session.save_count || 0) + 1);
+    }
     setSyncDot('synced');
     setSavedToday(true);
     setTodayTaskCounts({ complete: tasksComplete, total: tasksTotal });
