@@ -465,6 +465,15 @@ function App() {
     const countdownSeeds = [21, 14, 14, 14, 14];
 
     let newUnlocks = [...unlocks];
+    const rowsToUpsert: Array<{
+      user_id: string;
+      phase_id: number;
+      unlock_index: number;
+      title: string;
+      total_days: number;
+      remaining_days: number;
+      status: string;
+    }> = [];
 
     phase.mastery.forEach((title, idx) => {
       const seed = countdownSeeds[idx] || 14 + idx * 7;
@@ -498,32 +507,42 @@ function App() {
       } else {
         if (existing.status === 'active') existing.status = 'paused';
       }
+
+      rowsToUpsert.push({
+        user_id: user.id,
+        phase_id: existing.phase_id,
+        unlock_index: existing.unlock_index,
+        title: existing.title,
+        total_days: existing.total_days,
+        remaining_days: existing.remaining_days,
+        status: existing.status,
+      });
     });
 
     setUnlocks(newUnlocks);
 
-    for (const unlock of newUnlocks) {
-      if (unlock.id) {
-        await supabase
-          .from('camryn_unlocks')
-          .update({
-            remaining_days: unlock.remaining_days,
-            status: unlock.status,
-          })
-          .eq('id', unlock.id);
-      } else {
-        await supabase.from('camryn_unlocks').insert([
-          {
-            user_id: user.id,
-            phase_id: unlock.phase_id,
-            unlock_index: unlock.unlock_index,
-            title: unlock.title,
-            total_days: unlock.total_days,
-            remaining_days: unlock.remaining_days,
-            status: unlock.status,
-          },
-        ]);
-      }
+    const { data: upserted, error } = await supabase
+      .from('camryn_unlocks')
+      .upsert(rowsToUpsert, { onConflict: 'user_id,phase_id,unlock_index' })
+      .select();
+
+    if (error) {
+      console.error('applyUnlockProgress upsert failed:', error);
+      return;
+    }
+
+    if (upserted) {
+      setUnlocks((prev) => {
+        const merged = [...prev];
+        for (const row of upserted) {
+          const idx = merged.findIndex(
+            (u) => u.phase_id === row.phase_id && u.unlock_index === row.unlock_index
+          );
+          if (idx >= 0) merged[idx] = row as Unlock;
+          else merged.push(row as Unlock);
+        }
+        return merged;
+      });
     }
   };
 
