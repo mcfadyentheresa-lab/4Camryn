@@ -72,20 +72,17 @@ Deno.serve(async (req) => {
 
       if (saveError) throw saveError;
 
-      const { data: currentSession, error: sessionReadError } = await supabase
-        .from('camryn_sessions')
-        .select('save_count')
+      const { count: realSaveCount, error: countError } = await supabase
+        .from('camryn_daily_saves')
+        .select('*', { count: 'exact', head: true })
         .eq('user_id', row.user_id)
-        .maybeSingle();
-
-      if (sessionReadError) throw sessionReadError;
-
-      if (currentSession) {
+        .eq('is_complete', true);
+      if (countError) throw countError;
+      if (realSaveCount !== null) {
         const { error: sessionWriteError } = await supabase
           .from('camryn_sessions')
-          .update({ save_count: (currentSession.save_count ?? 0) + 1 })
+          .update({ save_count: realSaveCount })
           .eq('user_id', row.user_id);
-
         if (sessionWriteError) throw sessionWriteError;
       }
 
