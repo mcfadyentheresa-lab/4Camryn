@@ -26,6 +26,7 @@ import MorningNudgePrompt from './components/MorningNudgePrompt';
 import LovesSection from './components/LovesSection';
 import './App.css';
 import { syncToFrontDoor, fetchFrontDoorCompletions, subscribeFrontDoorCompletions } from './services/camrynSyncService';
+import Login from './Login';
 
 // Register service worker for push notifications
 if ('serviceWorker' in navigator) {
@@ -163,54 +164,31 @@ function App() {
   }, [session?.current_phase, session?.energy, session?.stress, session?.cycle_phase_name]);
 
   useEffect(() => {
-    const autoSignIn = async () => {
+    const init = async () => {
       const { data: { session: authSession } } = await supabase.auth.getSession();
       if (authSession?.user) {
         setUser(authSession.user);
         setLoading(false);
         loadSession(authSession.user.id);
-        return;
-      }
-
-      // Try anonymous sign-in first (requires it to be enabled in Supabase dashboard)
-      const { data: anonData } = await supabase.auth.signInAnonymously();
-      if (anonData?.user) {
-        setUser(anonData.user);
-        setLoading(false);
-        loadSession(anonData.user.id);
-        return;
-      }
-
-      // Fallback: device-bound account stored in localStorage
-      const DEVICE_KEY = 'camryn_device_id';
-      let deviceId = localStorage.getItem(DEVICE_KEY);
-      if (!deviceId) {
-        deviceId = crypto.randomUUID();
-        localStorage.setItem(DEVICE_KEY, deviceId);
-      }
-      const email = `device-${deviceId}@camryn.app`;
-      const password = `C${deviceId.replace(/-/g, '')}!`;
-
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-      if (!signInError && signInData.user) {
-        setUser(signInData.user);
-        setLoading(false);
-        loadSession(signInData.user.id);
-        return;
-      }
-
-      // Account doesn't exist yet — create it
-      const { data: signUpData } = await supabase.auth.signUp({ email, password });
-      if (signUpData?.user) {
-        setUser(signUpData.user);
-        setLoading(false);
-        loadSession(signUpData.user.id);
       } else {
         setLoading(false);
       }
     };
+    init();
 
-    autoSignIn();
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      if (newSession?.user) {
+        setUser(newSession.user);
+        loadSession(newSession.user.id);
+      } else {
+        setUser(null);
+        setSession(null);
+      }
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
   const loadSession = async (userId: string) => {
@@ -657,8 +635,19 @@ function App() {
     return <div style={{ padding: '20px', textAlign: 'center' }}>Loading...</div>;
   }
 
+  if (!user) {
+    return <Login />;
+  }
+
   if (!session) {
-    return <div style={{ padding: '20px', textAlign: 'center' }}>Initializing...</div>;
+    return (
+      <div style={{ padding: '20px', textAlign: 'center' }}>
+        <p>Something went wrong setting up your account.</p>
+        <button onClick={() => loadSession(user.id)} style={{ padding: '10px 20px', fontSize: '16px' }}>
+          Try again
+        </button>
+      </div>
+    );
   }
 
   // Show onboarding for new users who haven't completed it
