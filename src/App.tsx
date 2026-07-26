@@ -401,17 +401,7 @@ function App() {
     const today = new Date().toISOString().split('T')[0];
     const isComplete = tasksComplete === tasksTotal;
 
-    // Check whether today was already saved as complete before this call,
-    // so save_count only increments once per day (not on every reload/re-save).
-    const { data: existingSave } = await supabase
-      .from('camryn_daily_saves')
-      .select('is_complete')
-      .eq('user_id', user.id)
-      .eq('save_date', today)
-      .maybeSingle();
-    const wasComplete = (existingSave as any)?.is_complete ?? false;
-
-    await supabase
+    const { error: dailySaveError } = await supabase
       .from('camryn_daily_saves')
       .upsert([
         {
@@ -422,18 +412,25 @@ function App() {
           is_complete: isComplete,
         },
       ], { onConflict: 'user_id,save_date' });
-
+    if (dailySaveError) {
+      console.error('dailySave upsert failed:', dailySaveError);
+    }
     applyUnlockProgress(isComplete);
-
     setSyncDot('saving');
     setSaveStatus(
       isComplete
         ? `Saved just now · ${tasksComplete}/${tasksTotal} tasks complete`
         : `Saved just now · progress paused at ${tasksComplete}/${tasksTotal}`
     );
-
-    if (isComplete && !wasComplete) {
-      await updateSessionField('save_count', (session.save_count || 0) + 1);
+    const { count: realSaveCount, error: countError } = await supabase
+      .from('camryn_daily_saves')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('is_complete', true);
+    if (countError) {
+      console.error('save_count recompute failed:', countError);
+    } else if (realSaveCount !== null) {
+      await updateSessionField('save_count', realSaveCount);
     }
     setSyncDot('synced');
     setSavedToday(true);
