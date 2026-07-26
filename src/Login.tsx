@@ -54,8 +54,8 @@ export default function Login() {
             inputMode="numeric"
             value={code}
             onChange={(e) => setCode(e.target.value)}
-            placeholder="123456"
-            maxLength={6}
+            placeholder="12345678"
+            maxLength={8}
             required
             style={{ width: '100%', padding: '10px', fontSize: '20px', letterSpacing: '4px', textAlign: 'center', marginBottom: '12px' }}
           />
