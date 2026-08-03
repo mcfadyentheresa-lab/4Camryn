@@ -465,72 +465,122 @@ export function dailyTasks(
   const e = energy;
   const s = stress;
 
-  const phaseTasks: Record<string, Record<string, any>> = {
+  const phaseTasks: Record<string, Record<string, any[]>> = {
     1: {
-      Low: {
-        shortTitle: 'Drink your morning water',
-        title: 'Drink 500ml of water within 10 minutes of waking — before coffee, before your phone.',
-        body: 'Cortisol is naturally elevated on waking and dehydration amplifies it. This one act sets your hormonal tone for the morning and is the single highest-return action in Phase 1.',
-        tag: 'Foundation · Hydration',
-      },
-      Medium: {
-        shortTitle: 'Eat 3 plant sources today',
-        title: 'Eat 25–35g of fiber today from at least 3 different plant sources (legumes, vegetables, fruit, or wholegrains).',
-        body: 'Fiber diversity feeds your gut microbiome, which directly regulates estrogen clearance, inflammation, and appetite signals. More variety means more benefit — this is not optional in Phase 1.',
-        tag: 'Foundation · Gut',
-      },
-      High: {
-        shortTitle: 'Lock in your wake time',
-        title: 'Set one fixed wake time for the rest of this week and hold it regardless of bedtime.',
-        body: 'A consistent wake time anchors your circadian rhythm faster than a consistent bedtime. It regulates cortisol, melatonin, and hunger hormones within days. This is the foundation all other habits depend on.',
-        tag: 'Foundation · Sleep',
-      },
+      Low: [
+        {
+          shortTitle: 'Drink your morning water',
+          title: 'Drink 500ml of water within 10 minutes of waking — before coffee, before your phone.',
+          body: 'Cortisol is naturally elevated on waking and dehydration amplifies it. This one act sets your hormonal tone for the morning and is the single highest-return action in Phase 1.',
+          tag: 'Foundation · Hydration',
+        },
+        {
+          shortTitle: 'Add a fermented food today',
+          title: 'Eat one serving of a fermented food today — yogurt, kefir, sauerkraut, kimchi, or miso.',
+          body: 'Fermented foods introduce live cultures that directly support the gut microbiome changes already underway from your fiber intake. This is a small, single action with an outsized effect on the gut work Phase 1 is building.',
+          tag: 'Foundation · Gut',
+        },
+      ],
+      Medium: [
+        {
+          shortTitle: 'Eat 3 plant sources today',
+          title: 'Eat 25–35g of fiber today from at least 3 different plant sources (legumes, vegetables, fruit, or wholegrains).',
+          body: 'Fiber diversity feeds your gut microbiome, which directly regulates estrogen clearance, inflammation, and appetite signals. More variety means more benefit — this is not Optional in Phase 1.',
+          tag: 'Foundation · Gut',
+        },
+        {
+          shortTitle: 'Take your 5-minute check-in',
+          title: 'Spend 5 minutes today writing down: how did you sleep, what did you eat, how is your energy right now.',
+          body: 'You can\'t adjust what you don\'t track. This isn\'t about perfection — it\'s building the habit of noticing your own patterns before Phase 2 asks you to act on them.',
+          tag: 'Foundation · Awareness',
+        },
+      ],
+      High: [
+        {
+          shortTitle: 'Lock in your wake time',
+          title: 'Set one fixed wake time for the rest of this week and hold it regardless of bedtime.',
+          body: 'A consistent wake time anchors your circadian rhythm faster than a consistent bedtime. It regulates cortisol, melatonin, and hunger hormones within days. This is the foundation all other habits depend on.',
+          tag: 'Foundation · Sleep',
+        },
+      ],
     },
     2: {
-      Low: {
-        shortTitle: 'Protein-first breakfast',
-        title: 'Eat a protein-anchored breakfast within 60–90 minutes of waking. Aim for at least 25–30g of protein.',
-        body: 'Morning protein blunts the cortisol spike, stabilises blood sugar, and reduces afternoon cravings. This is the highest-return nutrition move in Phase 2 and the one most people underdo.',
-        tag: 'Ignition · Nutrition',
-      },
-      Medium: {
-        shortTitle: 'Take your daily walk',
-        title: 'Complete a 20–30 minute walk today, ideally outside. For the first 10 minutes, no earphones.',
-        body: 'Walking is a direct cortisol reducer and insulin sensitiser. Unstructured outdoor movement also improves mood regulation and reduces mental noise — it is not just exercise, it is nervous system care.',
-        tag: 'Ignition · Movement',
-      },
-      High: {
-        shortTitle: 'Do your strength session',
-        title: 'Complete your bodyweight strength session: 3 sets of squats, hip hinges, and push-ups. Rest 90 seconds between sets.',
-        body: 'Compound strength training twice a week is the minimum effective dose for body composition change. Squats, hinges, and push-ups recruit the most muscle and produce the strongest hormonal response. Do not skip this session.',
-        tag: 'Ignition · Strength',
-      },
+      Low: [
+        {
+          shortTitle: 'Protein-first breakfast',
+          title: 'Eat a protein-anchored breakfast within 60–90 minutes of waking. Aim for at least 25–30g of protein.',
+          body: 'Morning protein blunts the cortisol spike, stabilises blood sugar, and reduces afternoon cravings. This is the highest-return nutrition move in Phase 2 and the one most people underdo.',
+          tag: 'Ignition · Nutrition',
+        },
+        {
+          shortTitle: 'Hold your eating window',
+          title: 'Keep all your meals today within a consistent daily window — most people find 10–12 hours works well.',
+          body: 'A consistent eating window supports the insulin sensitivity gains from Phase 1 and gives your gut a real overnight rest. This isn\'t about restriction — it\'s about consistency.',
+          tag: 'Ignition · Eating Window',
+        },
+      ],
+      Medium: [
+        {
+          shortTitle: 'Take your daily walk',
+          title: 'Complete a 20–30 minute walk today, ideally outside. For the first 10 minutes, no earphones.',
+          body: 'Walking is a direct cortisol reducer and insulin sensitiser. Unstructured outdoor movement also improves mood regulation and reduces mental noise — it is not just exercise, it is nervous system care.',
+          tag: 'Ignition · Movement',
+        },
+      ],
+      High: [
+        {
+          shortTitle: 'Do your strength session',
+          title: 'Complete your bodyweight strength session: 3 sets of squats, hip hinges, and push-ups. Rest 90 seconds between sets.',
+          body: 'Compound strength training twice a week is the minimum effective dose for body composition change. Squats, hinges, and push-ups recruit the most muscle and produce the strongest hormonal response. Do not skip this session.',
+          tag: 'Ignition · Strength',
+        },
+        {
+          shortTitle: 'Do your skincare routine',
+          title: 'Complete your full skincare routine tonight — cleanse, treat, moisturize, in that order.',
+          body: 'Consistency matters more than product complexity here. Skin renewal happens overnight, and a steady routine is what actually produces visible change over the weeks ahead — not any single ingredient.',
+          tag: 'Ignition · Skincare',
+        },
+      ],
     },
     3: {
-      Low: {
-        shortTitle: 'Take your magnesium tonight',
-        title: 'Take 300–400mg of magnesium glycinate tonight, 30–60 minutes before bed.',
-        body: 'Magnesium glycinate is the most bioavailable form and directly supports sleep quality, muscle recovery, and progesterone function in the luteal phase. It is the most evidence-backed supplement in this protocol.',
-        tag: 'Build · Hormones',
-      },
-      Medium: {
-        shortTitle: 'Add progressive overload',
-        title: 'Add a third strength session this week. Focus on progressive overload — add one rep or 2.5–5kg to at least one lift.',
-        body: 'Progress requires a clear signal. Progressive overload is that signal — it tells your body to build more muscle, which changes your metabolism, shape, and hormonal health. Without it, you maintain. With it, you build.',
-        tag: 'Build · Body Composition',
-      },
-      High: {
-        shortTitle: 'Complete your mobility work',
-        title: 'Complete 10–15 minutes of joint mobility: hips, thoracic spine, and ankles. Use slow, controlled movement through full range of motion.',
-        body: 'Joints that move well allow you to train harder, recover faster, and sustain this protocol for years. Skipping mobility work is borrowing against your future capacity — do this even when it feels unnecessary.',
-        tag: 'Build · Longevity',
-      },
+      Low: [
+        {
+          shortTitle: 'Take your magnesium tonight',
+          title: 'Take 300–400mg of magnesium glycinate tonight, 30–60 minutes before bed.',
+          body: 'Magnesium glycinate is the most bioavailable form and directly supports sleep quality, muscle recovery, and progesterone function in the luteal phase. It is the most evidence-backed supplement in this protocol.',
+          tag: 'Build · Hormones',
+        },
+      ],
+      Medium: [
+        {
+          shortTitle: 'Add progressive overload',
+          title: 'Add a third strength session this week. Focus on progressive overload — add one rep or 2.5–5kg to at least one lift.',
+          body: 'Progress requires a clear signal. Progressive overload is that signal — it tells your body to build more muscle, which changes your metabolism, shape, and hormonal health. Without it, you maintain. With it, you build.',
+          tag: 'Build · Body Composition',
+        },
+        {
+          shortTitle: 'Log your cycle-adapted training',
+          title: 'Note how you adjusted today\'s training for your current cycle phase — intensity, type, or just deciding to rest.',
+          body: 'Training that respects your cycle isn\'t about doing less — it\'s about applying effort where your body can actually use it. A quick log turns this into a real, trackable habit instead of a vague intention.',
+          tag: 'Build · Cycle-Adapted Training',
+        },
+      ],
+      High: [
+        {
+          shortTitle: 'Complete your mobility work',
+          title: 'Complete 10–15 minutes of joint mobility: hips, thoracic spine, and ankles. Use slow, controlled movement through full range of motion.',
+          body: 'Joints that move well allow you to train harder, recover faster, and sustain this protocol for years. Skipping mobility work is borrowing against your future capacity — do this even when it feels unnecessary.',
+          tag: 'Build · Longevity',
+        },
+      ],
     },
   };
 
   const pk = String(phase);
-  const phaseTask =
-    (phaseTasks[pk] || phaseTasks['1'])[e] || (phaseTasks[pk] || phaseTasks['1']).Medium;
+  const today = new Date().toISOString().split('T')[0];
+  const phaseSeed = today.replace(/-/g, '').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  const phaseTaskPool = (phaseTasks[pk] || phaseTasks['1'])[e] || (phaseTasks[pk] || phaseTasks['1']).Medium;
+  const phaseTask = phaseTaskPool[phaseSeed % phaseTaskPool.length];
 
   let cycleTask: any;
   if (cyc.name === 'Menstruation') {
