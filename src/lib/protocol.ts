@@ -580,6 +580,66 @@ export function dailyTasks(
         },
       ],
     },
+    4: {
+      Low: [{
+        shortTitle: 'Do your daily breathwork',
+        title: 'Complete 5–10 minutes of structured breathwork today — box breathing or 4-7-8, whichever calms you fastest.',
+        body: 'Breathwork is the lowest-effort, highest-leverage regulation tool in this phase. On a low-energy day, this is the one action that keeps your nervous system building capacity instead of just surviving.',
+        tag: 'Integrate · Regulation',
+      }],
+      Medium: [{
+        shortTitle: 'Write one identity line',
+        title: 'Write one sentence today that starts with "I am becoming someone who..." — just one sentence, in your own words.',
+        body: 'Identity change happens through repeated small votes, not big declarations. A single honest sentence today is a real vote toward who you\'re building yourself into.',
+        tag: 'Integrate · Identity',
+      }],
+      High: [{
+        shortTitle: 'Take your cold exposure',
+        title: 'Complete 1–3 minutes of cold exposure today — a cold shower finish, ice bath, or cold plunge.',
+        body: 'Cold exposure builds real stress-response capacity — the same system this phase is training to recover faster under pressure. Discomfort tolerated on purpose, in a safe context, is the whole point.',
+        tag: 'Integrate · Resilience',
+      }],
+    },
+    5: {
+      Low: [{
+        shortTitle: 'Do your bone-loading movement',
+        title: 'Complete 10–15 minutes of weight-bearing movement today — a weighted vest walk, stair climbing, or bodyweight step-ups.',
+        body: 'Bone density responds to mechanical load, not cardio alone. This phase is about protecting the gains you\'ve built — a bone-loading habit is the single most overlooked piece of long-term health most protocols skip.',
+        tag: 'Sustain · Bone Health',
+      }],
+      Medium: [{
+        shortTitle: 'Do your zone 2 cardio',
+        title: 'Complete 20–30 minutes of zone 2 cardio today — a pace where you can hold a conversation but not sing.',
+        body: 'Zone 2 training builds mitochondrial density and metabolic flexibility that high-intensity work can\'t replicate. This is the quiet, unglamorous work that makes everything else in this phase sustainable.',
+        tag: 'Sustain · Metabolic Health',
+      }],
+      High: [{
+        shortTitle: 'Test your minimum effective dose',
+        title: 'Today, do only the smallest version of your protocol non-negotiables — the version you could sustain even on your worst week.',
+        body: 'Sustain phase isn\'t about doing more, it\'s about knowing your floor. Deliberately testing your minimum effective dose tells you exactly what to protect when life gets disrupted.',
+        tag: 'Sustain · Resilience',
+      }],
+    },
+    6: {
+      Low: [{
+        shortTitle: 'Reflect on your arc',
+        title: 'Write 2–3 sentences today on how far you\'ve come since Phase 1 — be specific, not just "better."',
+        body: 'Thrive phase is where the work gets integrated into who you are, not just what you do. Naming your progress concretely is what makes it durable.',
+        tag: 'Thrive · Reflection',
+      }],
+      Medium: [{
+        shortTitle: 'Support someone else\'s health',
+        title: 'Do one small thing today that supports someone else\'s health — share what worked for you, check in on them, or just listen.',
+        body: 'Health that only serves you individually is fragile. Extending what you\'ve built outward is both a real contribution and a way of reinforcing your own identity as someone who has changed.',
+        tag: 'Thrive · Contribution',
+      }],
+      High: [{
+        shortTitle: 'Define your next priority',
+        title: 'Spend 10 minutes today refining your top 3 priorities for the next arc — what matters most now that this one is nearly complete.',
+        body: 'Thriving isn\'t an endpoint — it\'s a new starting line. Getting specific about what\'s next keeps momentum from dissolving into vague good intentions.',
+        tag: 'Thrive · Vision',
+      }],
+    },
   };
 
   const pk = String(phase);
