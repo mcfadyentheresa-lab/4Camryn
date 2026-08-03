@@ -401,6 +401,15 @@ function App() {
     const today = new Date().toISOString().split('T')[0];
     const isComplete = tasksComplete === tasksTotal;
 
+    const { data: priorToday, error: priorError } = await supabase
+      .from('camryn_daily_saves')
+      .select('is_complete')
+      .eq('user_id', user.id)
+      .eq('save_date', today)
+      .maybeSingle();
+    if (priorError) console.error('prior-day read failed:', priorError);
+    const wasCompleteToday = priorToday?.is_complete === true;
+
     const { error: dailySaveError } = await supabase
       .from('camryn_daily_saves')
       .upsert([
@@ -415,7 +424,7 @@ function App() {
     if (dailySaveError) {
       console.error('dailySave upsert failed:', dailySaveError);
     }
-    applyUnlockProgress(isComplete);
+    applyUnlockProgress(isComplete, wasCompleteToday);
     setSyncDot('saving');
     setSaveStatus(
       isComplete
@@ -455,7 +464,7 @@ function App() {
     setTimeout(() => setSyncDot('idle'), 3000);
   };
 
-  const applyUnlockProgress = async (savedCompleteDay: boolean) => {
+  const applyUnlockProgress = async (savedCompleteDay: boolean, alreadyCountedToday: boolean) => {
     if (!user || !session) return;
 
     const phase = PROTOCOL.phases.find((p) => p.id === session.current_phase) || PROTOCOL.phases[0];
@@ -492,9 +501,9 @@ function App() {
       }
 
       if (savedCompleteDay) {
-        if (existing.status === 'not_started') existing.status = 'active';
-        if (existing.status === 'paused') existing.status = 'active';
-        if (existing.status === 'active' && existing.remaining_days > 0) {
+        if (existing.status === 'not_started' || existing.status === 'paused') existing.status = 'active';
+        // Only decrement the FIRST time today's completion is recorded.
+        if (!alreadyCountedToday && existing.status === 'active' && existing.remaining_days > 0) {
           existing.remaining_days -= 1;
         }
         if (existing.remaining_days <= 0) {
