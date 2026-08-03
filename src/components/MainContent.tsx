@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { PROTOCOL, dailyTasks } from '../lib/protocol';
+import { PROTOCOL, dailyTasks, dailyLearnForToday } from '../lib/protocol';
 import {
   PHASE_QUESTS,
   ensureDailyPick,
@@ -95,6 +95,7 @@ export default function MainContent({
   const [highlightedQuestId, setHighlightedQuestId] = useState<string | null>(null);
   const [masteryOpen, setMasteryOpen] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [learnOpen, setLearnOpen] = useState(false);
   // Time slot tracks which tasks are "unlocked" — updates every minute
   const [currentSlot, setCurrentSlot] = useState(() => getTaskSlot(new Date().getHours()));
   // todayKey drives a re-derivation of checkedItems when the calendar day changes.
@@ -115,6 +116,7 @@ export default function MainContent({
 
   const phase = PROTOCOL.phases.find((p) => p.id === session.current_phase) || PROTOCOL.phases[0];
   const tasks = dailyTasks(session.current_phase, session.energy, session.stress, session.cycle_phase_name);
+  const todayLearn = dailyLearnForToday(session.cycle_phase_name);
 
   const pKey = phaseKey(session.current_phase);
   const quests = useMemo(() => PHASE_QUESTS[session.current_phase] ?? PHASE_QUESTS[1], [session.current_phase]);
@@ -518,6 +520,30 @@ export default function MainContent({
             <div className="progress-bar">
               <div className="progress-bar-fill" style={{ width: `${(checkedItems.filter(Boolean).length / 3) * 100}%` }} />
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Today's Learn card ── */}
+      <div className="mastery-collapse" style={{ marginTop: '12px' }}>
+        <button
+          className="mastery-collapse-toggle"
+          onClick={() => setLearnOpen((v) => !v)}
+          aria-expanded={learnOpen}
+        >
+          <span className="mastery-collapse-label">📖 Today's Learn</span>
+          <span className="mastery-collapse-hint">{todayLearn.tag} · tap to read</span>
+          <svg
+            className={`mastery-collapse-chevron ${learnOpen ? 'open' : ''}`}
+            width="14" height="14" viewBox="0 0 14 14" fill="none"
+          >
+            <path d="M3 5l4 4 4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+        {learnOpen && (
+          <div className="mastery-collapse-body">
+            <p style={{ fontWeight: 600, marginBottom: '6px' }}>{todayLearn.title}</p>
+            <p>{todayLearn.body}</p>
           </div>
         )}
       </div>
