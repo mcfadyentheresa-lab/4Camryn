@@ -415,7 +415,10 @@ export default function MainContent({
               <div className="task-flip-front-text">
                 <span className="task-flip-label">{(task as any).shortTitle || shortTag(task.tag)}</span>
                 {isUnlocked ? (
-                  <span className="task-flip-hint">Tap to read</span>
+                  <>
+                    <span className="task-flip-hint">Tap to read</span>
+                    <p className="task-row-body">{task.body}</p>
+                  </>
                 ) : (
                   <span className="task-flip-hint task-flip-hint--locked">Available this {unlockSlot}</span>
                 )}
