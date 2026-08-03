@@ -564,6 +564,12 @@ export function dailyTasks(
           body: 'Training that respects your cycle isn\'t about doing less — it\'s about applying effort where your body can actually use it. A quick log turns this into a real, trackable habit instead of a vague intention.',
           tag: 'Build · Cycle-Adapted Training',
         },
+        {
+          shortTitle: 'Take your omega-3 today',
+          title: 'Take your omega-3 supplement (or eat a fatty-fish serving) with a meal today.',
+          body: 'Omega-3s work directly against the inflammation this phase\'s training load creates, and they\'re only effective with consistent daily intake — a missed day here isn\'t recovered by doubling up tomorrow.',
+          tag: 'Build · Hormones',
+        },
       ],
       High: [
         {
