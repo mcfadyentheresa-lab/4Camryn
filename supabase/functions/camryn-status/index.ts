@@ -19,10 +19,22 @@ const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
+    },
   });
 }
 Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { status: 200, headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
+    }});
+  }
   if (req.method !== 'POST') {
     return json({ error: 'method not allowed' }, 405);
   }
@@ -43,7 +55,7 @@ Deno.serve(async (req) => {
   if (saveError) return json({ error: saveError.message }, 500);
   const { data: session, error: sessionError } = await supabase
     .from('camryn_sessions')
-    .select('save_count')
+    .select('save_count, current_phase, energy')
     .eq('user_id', TARGET_USER_ID)
     .maybeSingle();
   if (sessionError) return json({ error: sessionError.message }, 500);
@@ -54,6 +66,8 @@ Deno.serve(async (req) => {
       is_complete: latestSave?.is_complete ?? null,
       save_date: latestSave?.save_date ?? null,
       save_count: session?.save_count ?? null,
+      current_phase: session?.current_phase ?? null,
+      energy: session?.energy ?? null,
       queried_at: new Date().toISOString(),
     },
   });
