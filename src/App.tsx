@@ -477,12 +477,12 @@ function App() {
     if (!session || !user || graduatingPhase === null) return;
     const nextPhase = graduatingPhase + 1;
 
-    if (nextPhase > 3) {
+    if (nextPhase > 6) {
       // Protocol complete
       const now = new Date().toISOString();
       const { data } = await supabase
         .from('camryn_sessions')
-        .update({ protocol_complete: true, protocol_completed_at: now, current_phase: 3 })
+        .update({ protocol_complete: true, protocol_completed_at: now, current_phase: 6 })
         .eq('user_id', user.id)
         .select()
         .maybeSingle();
@@ -603,7 +603,7 @@ function App() {
       )}
 
       {/* Phase graduation modal — appears over the app */}
-      {graduatingPhase !== null && graduatingPhase < 3 && (
+      {graduatingPhase !== null && graduatingPhase < 6 && (
         <PhaseGraduationModal
           completedPhase={graduatingPhase}
           displayName={displayName}
