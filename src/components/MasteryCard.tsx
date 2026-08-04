@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   PHASE_QUESTS,
   calcStreak,
@@ -24,6 +24,18 @@ function QuestRow({ id, title, targetDays, completedDates, isPick, isHighlighted
   const dotCount = Math.min(targetDays, 21);
   const filledDots = done ? dotCount : Math.min(streak, dotCount);
   const [bursting, setBursting] = useState(false);
+  const [celebrating, setCelebrating] = useState(false);
+  const prevDoneRef = useRef(done);
+
+  useEffect(() => {
+    if (done && !prevDoneRef.current) {
+      setCelebrating(true);
+      const t = setTimeout(() => setCelebrating(false), 1600);
+      prevDoneRef.current = true;
+      return () => clearTimeout(t);
+    }
+    prevDoneRef.current = done;
+  }, [done]);
 
   const handleToggle = () => {
     if (!doneToday && !done) {
@@ -43,8 +55,19 @@ function QuestRow({ id, title, targetDays, completedDates, isPick, isHighlighted
         isPick && !done ? 'quest-pick' : '',
         isHighlighted ? 'quest-highlighted' : '',
         streak >= 7 && !done ? 'quest-milestone' : '',
+        celebrating ? 'quest-celebrating' : '',
       ].filter(Boolean).join(' ')}
     >
+      {celebrating && (
+        <>
+          <div className="quest-celebrate-burst" aria-hidden>
+            {[...Array(12)].map((_, i) => (
+              <span key={i} className={`quest-celebrate-particle quest-celebrate-p${i}`} />
+            ))}
+          </div>
+          <div className="quest-celebrate-banner">Mastery unlocked!</div>
+        </>
+      )}
       <div className="quest-row-body">
         <div className="quest-title-line">
           <span className="quest-title">{title}</span>

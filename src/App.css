@@ -2961,6 +2961,81 @@ button.camryn-orb:focus-visible .camryn-orb-sphere {
   100% { box-shadow: 0 0 0 12px rgba(46,155,191,0); }
 }
 
+/* ── Quest completion celebration (one-time, fires when streak hits target) ── */
+
+.quest-row.quest-celebrating {
+  position: relative;
+  animation: quest-celebrate-glow 1.6s ease-out;
+}
+
+@keyframes quest-celebrate-glow {
+  0%   { background: color-mix(in srgb, var(--teal) 12%, var(--paper)); box-shadow: 0 0 0 0 rgba(34,184,156,0.5); }
+  30%  { background: color-mix(in srgb, var(--teal) 8%, var(--paper)); box-shadow: 0 0 0 6px rgba(34,184,156,0.25); }
+  100% { background: var(--paper); box-shadow: 0 0 0 0 rgba(34,184,156,0); }
+}
+
+.quest-celebrate-banner {
+  position: absolute;
+  top: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--teal);
+  background: var(--paper);
+  border: 1px solid color-mix(in srgb, var(--teal) 40%, transparent);
+  border-radius: 999px;
+  padding: 3px 10px;
+  white-space: nowrap;
+  animation: quest-celebrate-banner 1.6s ease-out forwards;
+  z-index: 10;
+}
+
+@keyframes quest-celebrate-banner {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(4px); }
+  15%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+  80%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-4px); }
+}
+
+.quest-celebrate-burst {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+  overflow: visible;
+}
+
+.quest-celebrate-particle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--teal);
+  animation: celebrate-fly 1s ease-out forwards;
+}
+
+.quest-celebrate-p0  { --bx: 0px;   --by: -40px; animation-delay: 0ms; }
+.quest-celebrate-p1  { --bx: 20px;  --by: -35px; animation-delay: 40ms; background: var(--camryn-cycle-mint); }
+.quest-celebrate-p2  { --bx: 35px;  --by: -20px; animation-delay: 80ms; }
+.quest-celebrate-p3  { --bx: 40px;  --by: 0px;   animation-delay: 0ms;   background: var(--camryn-cycle-mint); }
+.quest-celebrate-p4  { --bx: 35px;  --by: 20px;  animation-delay: 40ms; }
+.quest-celebrate-p5  { --bx: 20px;  --by: 35px;  animation-delay: 80ms;  background: var(--camryn-accent-coral); }
+.quest-celebrate-p6  { --bx: 0px;   --by: 40px;  animation-delay: 0ms; }
+.quest-celebrate-p7  { --bx: -20px; --by: 35px;  animation-delay: 40ms;  background: var(--camryn-cycle-mint); }
+.quest-celebrate-p8  { --bx: -35px; --by: 20px;  animation-delay: 80ms; }
+.quest-celebrate-p9  { --bx: -40px; --by: 0px;   animation-delay: 0ms;   background: var(--camryn-accent-coral); }
+.quest-celebrate-p10 { --bx: -35px; --by: -20px; animation-delay: 40ms; }
+.quest-celebrate-p11 { --bx: -20px; --by: -35px; animation-delay: 80ms;  background: var(--camryn-cycle-mint); }
+
+@keyframes celebrate-fly {
+  0%   { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--bx), var(--by)) scale(0.15); opacity: 0; }
+}
+
 /* Streak milestone glow */
 .quest-row.quest-milestone {
   position: relative;
