@@ -65,16 +65,6 @@ function computeIsNightMode(energyLevel: string): boolean {
   return hour >= nightStart || hour < 5;
 }
 
-interface Unlock {
-  id: string;
-  phase_id: number;
-  unlock_index: number;
-  title: string;
-  total_days: number;
-  remaining_days: number;
-  status: string;
-}
-
 const PHASE_COLORS: Record<number, { fill: string; track: string; soft: string }> = {
   1: { fill: 'var(--phase-1)', track: 'var(--phase-1-track)', soft: 'var(--phase-1-soft)' },
   2: { fill: 'var(--phase-2)', track: 'var(--phase-2-track)', soft: 'var(--phase-2-soft)' },
@@ -120,7 +110,6 @@ function App() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
-  const [unlocks, setUnlocks] = useState<Unlock[]>([]);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [saveStatus, setSaveStatus] = useState('Not saved yet');
   const [view, setView] = useState<AppView>(() => {
@@ -255,12 +244,6 @@ function App() {
       const { data } = await supabase.from('camryn_sessions').insert([newSession]).select().maybeSingle();
       if (data) { resolvedSession = data as Session; setSession(resolvedSession); }
     }
-
-    const { data: unlocksData } = await supabase
-      .from('camryn_unlocks')
-      .select('*')
-      .eq('user_id', userId);
-    setUnlocks(unlocksData as Unlock[] || []);
 
     // Load all-phase mastery from Supabase
     const mastery = await loadAllMastery(userId);
@@ -401,15 +384,6 @@ function App() {
     const today = new Date().toISOString().split('T')[0];
     const isComplete = tasksComplete === tasksTotal;
 
-    const { data: priorToday, error: priorError } = await supabase
-      .from('camryn_daily_saves')
-      .select('is_complete')
-      .eq('user_id', user.id)
-      .eq('save_date', today)
-      .maybeSingle();
-    if (priorError) console.error('prior-day read failed:', priorError);
-    const wasCompleteToday = priorToday?.is_complete === true;
-
     const { error: dailySaveError } = await supabase
       .from('camryn_daily_saves')
       .upsert([
@@ -424,7 +398,6 @@ function App() {
     if (dailySaveError) {
       console.error('dailySave upsert failed:', dailySaveError);
     }
-    applyUnlockProgress(isComplete, wasCompleteToday);
     setSyncDot('saving');
     setSaveStatus(
       isComplete
@@ -462,94 +435,6 @@ function App() {
     setDaysSinceLastSave(0);
     setDailyStreak((prev) => (prev === 0 ? 1 : prev));
     setTimeout(() => setSyncDot('idle'), 3000);
-  };
-
-  const applyUnlockProgress = async (savedCompleteDay: boolean, alreadyCountedToday: boolean) => {
-    if (!user || !session) return;
-
-    const phase = PROTOCOL.phases.find((p) => p.id === session.current_phase) || PROTOCOL.phases[0];
-    const countdownSeeds = [21, 14, 14, 14, 14];
-
-    let newUnlocks = [...unlocks];
-    const rowsToUpsert: Array<{
-      user_id: string;
-      phase_id: number;
-      unlock_index: number;
-      title: string;
-      total_days: number;
-      remaining_days: number;
-      status: string;
-    }> = [];
-
-    phase.mastery.forEach((title, idx) => {
-      const seed = countdownSeeds[idx] || 14 + idx * 7;
-      let existing = newUnlocks.find(
-        (u) => u.phase_id === session.current_phase && u.unlock_index === idx
-      );
-
-      if (!existing) {
-        existing = {
-          id: '',
-          phase_id: session.current_phase,
-          unlock_index: idx,
-          title,
-          total_days: seed,
-          remaining_days: seed,
-          status: 'not_started',
-        };
-        newUnlocks.push(existing);
-      }
-
-      if (savedCompleteDay) {
-        if (existing.status === 'not_started' || existing.status === 'paused') existing.status = 'active';
-        // Only decrement the FIRST time today's completion is recorded.
-        if (!alreadyCountedToday && existing.status === 'active' && existing.remaining_days > 0) {
-          existing.remaining_days -= 1;
-        }
-        if (existing.remaining_days <= 0) {
-          existing.remaining_days = 0;
-          existing.status = 'done';
-        }
-      } else {
-        if (existing.status === 'active') existing.status = 'paused';
-      }
-
-      rowsToUpsert.push({
-        user_id: user.id,
-        phase_id: existing.phase_id,
-        unlock_index: existing.unlock_index,
-        title: existing.title,
-        total_days: existing.total_days,
-        remaining_days: existing.remaining_days,
-        status: existing.status,
-      });
-    });
-
-    setUnlocks(newUnlocks);
-
-    const { data: upserted, error } = await supabase
-      .from('camryn_unlocks')
-      .upsert(rowsToUpsert, { onConflict: 'user_id,phase_id,unlock_index' })
-      .select();
-
-    if (error) {
-      console.error('applyUnlockProgress upsert failed:', error);
-      return;
-    }
-
-    if (upserted) {
-      setUnlocks((prev) => {
-        const merged = [...prev];
-        for (const row of upserted) {
-          const idx = merged.findIndex(
-            (u) => u.phase_id === row.phase_id && u.unlock_index === row.unlock_index
-          );
-          if (idx >= 0) merged[idx] = row as Unlock;
-          else merged.push(row as Unlock);
-        }
-        return merged;
-      });
-    }
   };
 
   const handleOnboardingComplete = async (data: {
