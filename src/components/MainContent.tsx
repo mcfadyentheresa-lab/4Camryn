@@ -55,6 +55,9 @@ function questIdFromTag(tag: string): string | null {
 function phaseKey(phase: number): keyof AllPhaseMastery {
   if (phase === 2) return 'phase2';
   if (phase === 3) return 'phase3';
+  if (phase === 4) return 'phase4';
+  if (phase === 5) return 'phase5';
+  if (phase === 6) return 'phase6';
   return 'phase1';
 }
 
