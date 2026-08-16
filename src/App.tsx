@@ -384,17 +384,7 @@ function App() {
     const today = new Date().toISOString().split('T')[0];
     const isComplete = tasksComplete === tasksTotal;
 
-    // DIAGNOSTIC — temporary logging to trace save failures
-    const { data: { session: diagAuthSession } } = await supabase.auth.getSession();
-    console.log('[DIAG handleSaveDay] user.id from React state:', user.id);
-    console.log('[DIAG handleSaveDay] auth.getSession() session:', diagAuthSession ? {
-      access_token_present: !!diagAuthSession.access_token,
-      access_token_expires_at: diagAuthSession.expires_at,
-      user_id: diagAuthSession.user?.id,
-    } : 'NO SESSION');
-    // END DIAGNOSTIC
-
-    const { data: dailySaveData, error: dailySaveError } = await supabase
+    const { error: dailySaveError } = await supabase
       .from('camryn_daily_saves')
       .upsert([
         {
@@ -405,7 +395,6 @@ function App() {
           is_complete: isComplete,
         },
       ], { onConflict: 'user_id,save_date' });
-    console.log('[DIAG handleSaveDay] daily_saves upsert response:', { data: dailySaveData, error: dailySaveError });
     if (dailySaveError) {
       console.error('dailySave upsert failed:', dailySaveError);
     }
