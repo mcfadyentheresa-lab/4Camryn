@@ -62,13 +62,6 @@ function phaseKey(phase: number): keyof AllPhaseMastery {
   return 'phase1';
 }
 
-// Time-of-day slot: morning=0, afternoon=1, evening=2
-function getTaskSlot(hour: number): number {
-  if (hour >= 5 && hour < 11) return 0;
-  if (hour >= 11 && hour < 17) return 1;
-  return 2;
-}
-
 function getSlotLabel(slot: number): string {
   if (slot === 0) return 'morning';
   if (slot === 1) return 'afternoon';
@@ -100,8 +93,6 @@ export default function MainContent({
   const [masteryOpen, setMasteryOpen] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   const [learnOpen, setLearnOpen] = useState(false);
-  // Time slot tracks which tasks are "unlocked" — updates every minute
-  const [currentSlot, setCurrentSlot] = useState(() => getTaskSlot(new Date().getHours()));
   // todayKey drives a re-derivation of checkedItems when the calendar day changes.
   // This ensures accumulation tasks reset to unchecked at midnight rather than
   // carrying forward the previous day's checked state.
@@ -109,10 +100,9 @@ export default function MainContent({
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedRef = useRef(false);
 
-  // Re-evaluate time slot every minute; also poll for date change at midnight
+  // Poll for date change at midnight
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentSlot(getTaskSlot(new Date().getHours()));
       setTodayKey(localToday());
     }, 60_000);
     return () => clearInterval(interval);
@@ -402,8 +392,7 @@ export default function MainContent({
         {tasks.map((task, idx) => {
           const isCycleRow = idx === 1;
           const isExpanded = expanded === idx;
-          const isUnlocked = checkedItems[idx] || idx <= currentSlot;
-          const unlockSlot = getSlotLabel(idx);
+          const bestSlot = getSlotLabel(idx);
 
           return (
             <div
@@ -411,28 +400,16 @@ export default function MainContent({
               className={[
                 'task-row-simple',
                 checkedItems[idx] ? 'is-done' : '',
-                !isUnlocked ? 'task-row-locked' : '',
               ].filter(Boolean).join(' ')}
-              onClick={() => isUnlocked ? openCard(idx) : undefined}
+              onClick={() => openCard(idx)}
             >
               <span className="task-flip-emoji">{taskEmoji(task.tag)}</span>
               <div className="task-flip-front-text">
                 <span className="task-flip-label">{(task as any).shortTitle || shortTag(task.tag)}</span>
-                {isUnlocked ? (
-                  <>
-                    <span className="task-flip-hint">Tap to read</span>
-                    <p className="task-row-body">{task.body}</p>
-                  </>
-                ) : (
-                  <span className="task-flip-hint task-flip-hint--locked">Available this {unlockSlot}</span>
-                )}
+                <span className="task-flip-hint">Best this {bestSlot}</span>
+                <p className="task-row-body">{task.body}</p>
               </div>
-              {!isUnlocked ? (
-                <svg className="task-row-chevron task-row-lock" width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <rect x="2.5" y="6.5" width="9" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
-                  <path d="M4.5 6.5V4.5a2.5 2.5 0 0 1 5 0v2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-                </svg>
-              ) : checkedItems[idx] ? (
+              {checkedItems[idx] ? (
                 <span className="task-flip-done-badge">
                   <svg width="10" height="8" viewBox="0 0 11 9" fill="none">
                     <path d="M1 4.5L4 7.5L10 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -446,7 +423,7 @@ export default function MainContent({
 
               {/* Expanded drawer — portaled to document.body so it escapes
                   .task-row-simple's opacity:0.45 and stacking context */}
-              {isExpanded && isUnlocked && createPortal(
+              {isExpanded && createPortal(
                 <>
                   <div className="task-drawer-backdrop" onClick={(e) => { e.stopPropagation(); closeCard(); }} />
                   <div className="task-drawer" onClick={(e) => e.stopPropagation()}>

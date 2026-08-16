@@ -7892,25 +7892,6 @@ button.camryn-orb:focus-visible .camryn-orb-sphere {
   color: var(--ink);
 }
 
-/* ── Task locked state ──────────────────────────── */
-.task-row-simple.task-row-locked {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.task-row-simple.task-row-locked:hover {
-  background: transparent;
-}
-
-.task-flip-hint--locked {
-  color: var(--accent);
-  font-style: italic;
-}
-
-.task-row-lock {
-  color: var(--muted);
-}
-
 /* ── Notification banner ────────────────────────── */
 .notif-banner {
   position: fixed;
