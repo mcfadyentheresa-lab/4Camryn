@@ -8,7 +8,7 @@ interface HeaderProps {
   theme?: 'light' | 'dark';
   onThemeToggle?: () => void;
   saveStatus?: string;
-  syncDot?: 'synced' | 'saving' | 'idle';
+  syncDot?: 'synced' | 'saving' | 'idle' | 'error';
   view: AppView;
   onViewChange: (view: AppView) => void;
   currentPhase?: number;
@@ -41,7 +41,7 @@ export default function Header({ syncDot = 'idle', view, onViewChange, currentPh
             {dayCount != null && dayCount > 0 && (
               <span className="header-day-count">
                 Day {dayCount}
-                <span className={`sync-dot sync-dot--${syncDot}`} title={syncDot === 'synced' ? 'Synced to cloud' : syncDot === 'saving' ? 'Saving...' : ''} />
+                <span className={`sync-dot sync-dot--${syncDot}`} title={syncDot === 'synced' ? 'Synced to cloud' : syncDot === 'saving' ? 'Saving...' : syncDot === 'error' ? 'Save failed' : ''} />
               </span>
             )}
             <button className="nav-btn" onClick={() => setShowProtocol(true)}>Protocol</button>

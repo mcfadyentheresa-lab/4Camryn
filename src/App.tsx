@@ -124,8 +124,23 @@ function App() {
   const [masteryLoaded, setMasteryLoaded] = useState(false);
   const [showCheckin, setShowCheckin] = useState(false);
   const [isNightMode, setIsNightMode] = useState(false);
-  const [syncDot, setSyncDot] = useState<'synced' | 'saving' | 'idle'>('idle');
+  const [syncDot, setSyncDot] = useState<'synced' | 'saving' | 'idle' | 'error'>('idle');
   const [savedToday, setSavedToday] = useState(false);
+  const [saveErrorMsg, setSaveErrorMsg] = useState<string | null>(null);
+  const showSaveError = saveErrorMsg !== null;
+  const saveRetryFnRef = useRef<(() => Promise<void>) | null>(null);
+
+  const dismissSaveError = () => {
+    setSaveErrorMsg(null);
+    saveRetryFnRef.current = null;
+    if (syncDot === 'error') setSyncDot('idle');
+  };
+  const retrySaveError = () => {
+    const fn = saveRetryFnRef.current;
+    saveRetryFnRef.current = null;
+    setSaveErrorMsg(null);
+    if (fn) fn();
+  };
   const [dailyStreak, setDailyStreak] = useState(0);
   const [daysSinceLastSave, setDaysSinceLastSave] = useState<number | null>(null);
   const [todayTaskCounts, setTodayTaskCounts] = useState<{ complete: number; total: number }>({ complete: 0, total: 0 });
@@ -215,12 +230,15 @@ function App() {
       }
 
       if (Object.keys(patched).length > 0) {
-        const { data: updated } = await supabase
+        const { data: updated, error: patchError } = await supabase
           .from('camryn_sessions')
           .update(patched as any)
           .eq('user_id', userId)
           .select()
           .maybeSingle();
+        if (patchError) {
+          console.error('session auto-patch failed:', patchError);
+        }
         resolvedSession = { ...sessionData, ...patched, ...(updated ?? {}) } as Session;
         setSession(resolvedSession);
       } else {
@@ -241,8 +259,13 @@ function App() {
         save_count: 0,
         display_name: metaName ?? null,
       };
-      const { data } = await supabase.from('camryn_sessions').insert([newSession]).select().maybeSingle();
-      if (data) { resolvedSession = data as Session; setSession(resolvedSession); }
+      const { data: inserted, error: insertError } = await supabase.from('camryn_sessions').insert([newSession]).select().maybeSingle();
+      if (insertError) {
+        console.error('session insert failed:', insertError);
+      } else if (inserted) {
+        resolvedSession = inserted as Session;
+        setSession(resolvedSession);
+      }
     }
 
     // Load all-phase mastery from Supabase
@@ -336,15 +359,20 @@ function App() {
     return () => clearInterval(interval);
   }, [session?.energy]);
 
-  const updateSessionField = async (field: string, value: any) => {
-    if (!session || !user) return;
+  const updateSessionField = async (field: string, value: any): Promise<boolean> => {
+    if (!session || !user) return false;
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('camryn_sessions')
       .update({ [field]: value } as any)
       .eq('user_id', user.id)
       .select()
       .maybeSingle();
+
+    if (error) {
+      console.error(`updateSessionField failed (${field}):`, error);
+      return false;
+    }
 
     if (data) setSession(data as Session);
     if (data && (field === 'energy' || field === 'stress')) {
@@ -366,6 +394,7 @@ function App() {
         taskShortTitles: _syncTasks.map((t) => (t as any).shortTitle || _syncShortTag(t.tag)),
       }).catch(() => {});
     }
+    return true;
   };
 
   const handleCycleDateChange = (dateStr: string) => {
@@ -384,57 +413,75 @@ function App() {
     const today = new Date().toISOString().split('T')[0];
     const isComplete = tasksComplete === tasksTotal;
 
-    const { error: dailySaveError } = await supabase
-      .from('camryn_daily_saves')
-      .upsert([
-        {
-          user_id: user.id,
-          save_date: today,
-          tasks_complete: tasksComplete,
-          tasks_total: tasksTotal,
-          is_complete: isComplete,
-        },
-      ], { onConflict: 'user_id,save_date' });
-    if (dailySaveError) {
-      console.error('dailySave upsert failed:', dailySaveError);
-    }
-    setSyncDot('saving');
-    setSaveStatus(
-      isComplete
-        ? `Saved just now · ${tasksComplete}/${tasksTotal} tasks complete`
-        : `Saved just now · progress paused at ${tasksComplete}/${tasksTotal}`
-    );
-    const { count: realSaveCount, error: countError } = await supabase
-      .from('camryn_daily_saves')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-      .eq('is_complete', true);
-    if (countError) {
-      console.error('save_count recompute failed:', countError);
-    } else if (realSaveCount !== null) {
-      await updateSessionField('save_count', realSaveCount);
-    }
-    setSyncDot('synced');
-    setSavedToday(true);
-    setTodayTaskCounts({ complete: tasksComplete, total: tasksTotal });
-    syncToFrontDoor({
-      userId: user.id,
-      protocolPhase: session.current_phase,
-      protocolPhaseName: PROTOCOL.phases.find((p) => p.id === session.current_phase)?.name ?? '',
-      cyclePhase: session.cycle_phase_name,
-      energy: session.energy,
-      stress: session.stress,
-      dailyStreak,
-      savedToday: true,
-      tasksComplete,
-      tasksTotal,
-      protocolComplete: session.protocol_complete ?? false,
-      taskShortTitles: allTaskShortTitles,
-      checkedItems,
-    }).catch(() => {});
-    setDaysSinceLastSave(0);
-    setDailyStreak((prev) => (prev === 0 ? 1 : prev));
-    setTimeout(() => setSyncDot('idle'), 3000);
+    const attemptSave = async () => {
+      setSyncDot('saving');
+      setSaveStatus(
+        isComplete
+          ? `Saving · ${tasksComplete}/${tasksTotal} tasks complete`
+          : `Saving · progress paused at ${tasksComplete}/${tasksTotal}`
+      );
+
+      const { error: dailySaveError } = await supabase
+        .from('camryn_daily_saves')
+        .upsert([
+          {
+            user_id: user.id,
+            save_date: today,
+            tasks_complete: tasksComplete,
+            tasks_total: tasksTotal,
+            is_complete: isComplete,
+          },
+        ], { onConflict: 'user_id,save_date' });
+
+      if (dailySaveError) {
+        console.error('dailySave upsert failed:', dailySaveError);
+        setSyncDot('error');
+        setSaveStatus('Save failed — tap retry');
+        setSaveErrorMsg('Could not save today\u2019s progress. Your work is still here — just needs to sync.');
+        saveRetryFnRef.current = attemptSave;
+        return;
+      }
+
+      const { count: realSaveCount, error: countError } = await supabase
+        .from('camryn_daily_saves')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('is_complete', true);
+      if (countError) {
+        console.error('save_count recompute failed:', countError);
+      } else if (realSaveCount !== null) {
+        await updateSessionField('save_count', realSaveCount);
+      }
+
+      setSyncDot('synced');
+      setSavedToday(true);
+      setSaveStatus(
+        isComplete
+          ? `Saved just now · ${tasksComplete}/${tasksTotal} tasks complete`
+          : `Saved just now · progress paused at ${tasksComplete}/${tasksTotal}`
+      );
+      setTodayTaskCounts({ complete: tasksComplete, total: tasksTotal });
+      syncToFrontDoor({
+        userId: user.id,
+        protocolPhase: session.current_phase,
+        protocolPhaseName: PROTOCOL.phases.find((p) => p.id === session.current_phase)?.name ?? '',
+        cyclePhase: session.cycle_phase_name,
+        energy: session.energy,
+        stress: session.stress,
+        dailyStreak,
+        savedToday: true,
+        tasksComplete,
+        tasksTotal,
+        protocolComplete: session.protocol_complete ?? false,
+        taskShortTitles: allTaskShortTitles,
+        checkedItems,
+      }).catch(() => {});
+      setDaysSinceLastSave(0);
+      setDailyStreak((prev) => (prev === 0 ? 1 : prev));
+      setTimeout(() => setSyncDot('idle'), 3000);
+    };
+
+    attemptSave();
   };
 
   const handleOnboardingComplete = async (data: {
@@ -453,12 +500,18 @@ function App() {
       last_period_date: data.lastPeriodDate ?? null,
       onboarding_complete: true,
     };
-    const { data: updated } = await supabase
+    const { data: updated, error } = await supabase
       .from('camryn_sessions')
       .update(updates)
       .eq('user_id', user.id)
       .select()
       .maybeSingle();
+    if (error) {
+      console.error('onboarding complete failed:', error);
+      setSaveErrorMsg('Could not save your onboarding. Please try again.');
+      saveRetryFnRef.current = () => handleOnboardingComplete(data);
+      return;
+    }
     if (updated) {
       setSession(updated as Session);
       handleViewChange('today');
@@ -480,23 +533,35 @@ function App() {
     if (nextPhase > 6) {
       // Protocol complete
       const now = new Date().toISOString();
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('camryn_sessions')
         .update({ protocol_complete: true, protocol_completed_at: now, current_phase: 6 })
         .eq('user_id', user.id)
         .select()
         .maybeSingle();
+      if (error) {
+        console.error('protocol complete failed:', error);
+        setSaveErrorMsg('Could not complete the protocol. Please try again.');
+        saveRetryFnRef.current = () => handleAdvancePhase();
+        return;
+      }
       if (data) setSession(data as Session);
       setGraduatingPhase(null);
       return;
     }
 
-    const { data } = await supabase
+    const { data, error: advanceError } = await supabase
       .from('camryn_sessions')
       .update({ current_phase: nextPhase, phase_start_save_count: session.save_count })
       .eq('user_id', user.id)
       .select()
       .maybeSingle();
+    if (advanceError) {
+      console.error('advance phase failed:', advanceError);
+      setSaveErrorMsg('Could not advance to the next phase. Please try again.');
+      saveRetryFnRef.current = () => handleAdvancePhase();
+      return;
+    }
     if (data) setSession(data as Session);
 
     // Re-init mastery progress for the new phase
@@ -510,12 +575,18 @@ function App() {
 
   const handleProtocolMaintain = async () => {
     if (!session || !user) return;
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('camryn_sessions')
       .update({ protocol_mode: 'maintain' })
       .eq('user_id', user.id)
       .select()
       .maybeSingle();
+    if (error) {
+      console.error('protocol maintain failed:', error);
+      setSaveErrorMsg('Could not switch to maintain mode. Please try again.');
+      saveRetryFnRef.current = () => handleProtocolMaintain();
+      return;
+    }
     if (data) setSession(data as Session);
   };
 
@@ -531,12 +602,18 @@ function App() {
     };
     await saveAllMastery(user.id, blank);
     setAllMastery(blank);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('camryn_sessions')
       .update({ current_phase: 1, protocol_complete: false, protocol_completed_at: null, protocol_mode: 'protocol' })
       .eq('user_id', user.id)
       .select()
       .maybeSingle();
+    if (error) {
+      console.error('protocol restart failed:', error);
+      setSaveErrorMsg('Could not restart the protocol. Please try again.');
+      saveRetryFnRef.current = () => handleProtocolRestart();
+      return;
+    }
     if (data) setSession(data as Session);
     setPhaseProgress(0);
   };
@@ -612,6 +689,16 @@ function App() {
       )}
 
       <NotificationBanner savedToday={savedToday} />
+
+      {showSaveError && (
+        <div className="save-error-toast">
+          <span className="save-error-toast-text">{saveErrorMsg}</span>
+          <div className="save-error-toast-actions">
+            <button className="save-error-toast-btn save-error-toast-btn--dismiss" onClick={dismissSaveError}>Dismiss</button>
+            <button className="save-error-toast-btn save-error-toast-btn--retry" onClick={retrySaveError}>Retry</button>
+          </div>
+        </div>
+      )}
 
       <div className="app">
         <Header
@@ -694,19 +781,21 @@ function App() {
                 onMasteryUpdate={(updated) => {
                   setAllMastery(updated);
                 }}
-                onNotesUpdate={(notes) => {
+                onNotesUpdate={async (notes) => {
                   setSession((prev) => prev ? { ...prev, personal_notes: notes } : prev);
-                  supabase
+                  const { error } = await supabase
                     .from('camryn_sessions')
                     .update({ personal_notes: notes })
                     .eq('user_id', user.id);
+                  if (error) console.error('notes update failed:', error);
                 }}
-                onWinddownUpdate={(summary) => {
+                onWinddownUpdate={async (summary) => {
                   setSession((prev) => prev ? { ...prev, last_winddown: summary } : prev);
-                  supabase
+                  const { error } = await supabase
                     .from('camryn_sessions')
                     .update({ last_winddown: summary })
                     .eq('user_id', user.id);
+                  if (error) console.error('winddown update failed:', error);
                 }}
               />
             </div>
