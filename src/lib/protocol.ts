@@ -449,12 +449,6 @@ export function phaseFromDay(day: number) {
   return CYCLE_PHASES[4];
 }
 
-export function taskTier(energy: string) {
-  if (energy === 'Low') return { name: 'Tier 1', tone: 'Start softly' };
-  if (energy === 'Medium') return { name: 'Tier 2', tone: 'Good working rhythm' };
-  return { name: 'Tier 3', tone: 'Use your energy well' };
-}
-
 export function dailyTasks(
   phase: number,
   energy: string,

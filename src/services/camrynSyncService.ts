@@ -1,6 +1,6 @@
 import { createClient, RealtimeChannel } from '@supabase/supabase-js';
 
-// Untyped client intentionally — daily_items/camryn_state are shared FrontDoor tables
+// Untyped client intentionally — daily_items is a shared FrontDoor table
 // not in database.types.ts. Uses same credentials as the main client so the Supabase
 // SDK shares the persisted auth session from localStorage.
 const supabase = createClient(
@@ -15,36 +15,17 @@ function localToday(): string {
 
 export interface CamrynSyncPayload {
   userId: string;
-  protocolPhase: number;
-  protocolPhaseName: string;
-  cyclePhase: string;
   energy: string;
-  stress: string;
-  dailyStreak: number;
-  savedToday: boolean;
-  tasksComplete: number;
-  tasksTotal: number;
-  protocolComplete: boolean;
   taskShortTitles: string[]; // all 3 task short titles
   checkedItems?: boolean[]; // which of the 3 tasks are checked off
 }
 
 export async function syncToFrontDoor(payload: CamrynSyncPayload): Promise<void> {
   try {
-    await Promise.all([
-      upsertCamrynState(payload),
-      upsertDailyItems(payload.taskShortTitles, payload.energy, payload.userId, payload.checkedItems),
-    ]);
+    await upsertDailyItems(payload.taskShortTitles, payload.energy, payload.userId, payload.checkedItems);
   } catch (err) {
     console.error('[camrynSync] sync failed:', err);
   }
-}
-
-async function upsertCamrynState(p: CamrynSyncPayload) {
-  const payload = { protocol_phase: p.protocolPhase, protocol_phase_name: p.protocolPhaseName, cycle_phase_name: p.cyclePhase, energy_level: p.energy, stress_level: p.stress, daily_streak: p.dailyStreak, saved_today: p.savedToday, tasks_complete: p.tasksComplete, tasks_total: p.tasksTotal, protocol_complete: p.protocolComplete, updated_at: new Date().toISOString() };
-  const { data: existing } = await supabase.from('camryn_state').select('id').eq('user_id', p.userId).order('updated_at', { ascending: false }).limit(1).maybeSingle();
-  if (existing) { await supabase.from('camryn_state').update(payload).eq('id', existing.id); }
-  else { await supabase.from('camryn_state').insert({ ...payload, user_id: p.userId }); }
 }
 
 export async function upsertChatTask(userId: string, title: string, energy: string): Promise<void> {

@@ -221,11 +221,6 @@ function loadLegacyMastery(): MasteryData | null {
   return null;
 }
 
-export function saveMasteryData(_data: MasteryData): void {
-  // No-op — mastery is now persisted to Supabase only.
-  // Kept for call-site compatibility during transition.
-}
-
 // ── Supabase persistence ───────────────────────────────────────────────────────
 
 export async function loadAllMastery(userId: string): Promise<AllPhaseMastery> {

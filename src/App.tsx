@@ -143,7 +143,6 @@ function App() {
   };
   const [dailyStreak, setDailyStreak] = useState(0);
   const [daysSinceLastSave, setDaysSinceLastSave] = useState<number | null>(null);
-  const [todayTaskCounts, setTodayTaskCounts] = useState<{ complete: number; total: number }>({ complete: 0, total: 0 });
   const [frontDoorCompletions, setFrontDoorCompletions] = useState<number[]>([]);
   const frontDoorChannelRef = useRef<ReturnType<typeof subscribeFrontDoorCompletions> | null>(null);
 
@@ -197,9 +196,6 @@ function App() {
 
   const loadSession = async (userId: string) => {
     let resolvedSession: Session | null = null;
-    let localStreak = 0;
-    let localSavedToday = false;
-    let localTaskCounts = { complete: 0, total: 0 };
     const { data: sessionData } = await supabase
       .from('camryn_sessions')
       .select('*')
@@ -304,7 +300,6 @@ function App() {
         cursor.setDate(cursor.getDate() - 1);
       }
       setDailyStreak(streak);
-      localStreak = streak;
       // Days since last save
       const latest = savesData[0]?.save_date as string;
       const latestDate = new Date(latest + 'T12:00:00');
@@ -313,14 +308,7 @@ function App() {
       const diff = Math.round((todayDate.getTime() - latestDate.getTime()) / 86400000);
       setDaysSinceLastSave(diff);
       if (diff === 0) {
-        localSavedToday = true;
         setSavedToday(true);
-        const todayRow = savesData.find((r: any) => r.save_date === todayStr);
-        if (todayRow) {
-          const localCounts = { complete: (todayRow as any).tasks_complete ?? 0, total: (todayRow as any).tasks_total ?? 0 };
-          setTodayTaskCounts(localCounts);
-          localTaskCounts = localCounts;
-        }
       }
     } else {
       setDaysSinceLastSave(null);
@@ -328,22 +316,12 @@ function App() {
 
     setShowCheckin((prev) => prev || shouldShowCheckin());
     if (resolvedSession) {
-      const _syncPhase = PROTOCOL.phases.find((p) => p.id === resolvedSession!.current_phase);
       const _syncTasks = dailyTasks(resolvedSession!.current_phase, resolvedSession!.energy, resolvedSession!.stress, resolvedSession!.cycle_phase_name);
       const _syncShortTag = (tag: string) => tag.split('·')[1]?.trim() || tag;
       const _syncTaskTitles = _syncTasks.map((t) => (t as any).shortTitle || _syncShortTag(t.tag));
       syncToFrontDoor({
         userId,
-        protocolPhase: resolvedSession!.current_phase,
-        protocolPhaseName: _syncPhase?.name ?? '',
-        cyclePhase: resolvedSession!.cycle_phase_name,
         energy: resolvedSession!.energy,
-        stress: resolvedSession!.stress,
-        dailyStreak: localStreak,
-        savedToday: localSavedToday,
-        tasksComplete: localTaskCounts.complete,
-        tasksTotal: localTaskCounts.total,
-        protocolComplete: resolvedSession!.protocol_complete ?? false,
         taskShortTitles: _syncTaskTitles,
       }).catch(() => {});
     }
@@ -376,21 +354,11 @@ function App() {
 
     if (data) setSession(data as Session);
     if (data && (field === 'energy' || field === 'stress')) {
-      const _syncPhase = PROTOCOL.phases.find((p) => p.id === data.current_phase);
       const _syncTasks = dailyTasks(data.current_phase, data.energy, data.stress, data.cycle_phase_name);
       const _syncShortTag = (tag: string) => tag.split('·')[1]?.trim() || tag;
       syncToFrontDoor({
         userId: user.id,
-        protocolPhase: data.current_phase,
-        protocolPhaseName: _syncPhase?.name ?? '',
-        cyclePhase: data.cycle_phase_name,
         energy: data.energy,
-        stress: data.stress,
-        dailyStreak,
-        savedToday,
-        tasksComplete: todayTaskCounts.complete,
-        tasksTotal: todayTaskCounts.total,
-        protocolComplete: data.protocol_complete ?? false,
         taskShortTitles: _syncTasks.map((t) => (t as any).shortTitle || _syncShortTag(t.tag)),
       }).catch(() => {});
     }
@@ -460,19 +428,9 @@ function App() {
           ? `Saved just now · ${tasksComplete}/${tasksTotal} tasks complete`
           : `Saved just now · progress paused at ${tasksComplete}/${tasksTotal}`
       );
-      setTodayTaskCounts({ complete: tasksComplete, total: tasksTotal });
       syncToFrontDoor({
         userId: user.id,
-        protocolPhase: session.current_phase,
-        protocolPhaseName: PROTOCOL.phases.find((p) => p.id === session.current_phase)?.name ?? '',
-        cyclePhase: session.cycle_phase_name,
         energy: session.energy,
-        stress: session.stress,
-        dailyStreak,
-        savedToday: true,
-        tasksComplete,
-        tasksTotal,
-        protocolComplete: session.protocol_complete ?? false,
         taskShortTitles: allTaskShortTitles,
         checkedItems,
       }).catch(() => {});
