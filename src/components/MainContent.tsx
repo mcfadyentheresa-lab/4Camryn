@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { PROTOCOL, dailyTasks, dailyLearnForToday } from '../lib/protocol';
 import {
   PHASE_QUESTS,
@@ -443,8 +444,9 @@ export default function MainContent({
                 </svg>
               )}
 
-              {/* Expanded drawer */}
-              {isExpanded && isUnlocked && (
+              {/* Expanded drawer — portaled to document.body so it escapes
+                  .task-row-simple's opacity:0.45 and stacking context */}
+              {isExpanded && isUnlocked && createPortal(
                 <>
                   <div className="task-drawer-backdrop" onClick={(e) => { e.stopPropagation(); closeCard(); }} />
                   <div className="task-drawer" onClick={(e) => e.stopPropagation()}>
@@ -493,7 +495,8 @@ export default function MainContent({
                       </button>
                     </div>
                   </div>
-                </>
+                </>,
+                document.body
               )}
             </div>
           );
