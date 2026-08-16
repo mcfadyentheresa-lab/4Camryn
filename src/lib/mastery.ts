@@ -300,7 +300,4 @@ export function ensureDailyPick(data: MasteryData, quests: Quest[]): MasteryData
   return { ...data, pickDate: today, pickId };
 }
 
-// Legacy shim — kept so App.tsx calcPhaseProgress still compiles until refactored
-export function loadMasteryData(): MasteryData {
-  return loadLegacyMastery() ?? blankMasteryData(FOUNDATION_QUESTS);
-}
+

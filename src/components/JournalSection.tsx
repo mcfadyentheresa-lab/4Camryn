@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import { loadMasteryData, calcStreak, FOUNDATION_QUESTS, PHASE_QUESTS, isTodayCompleted, toggleToday, saveAllMastery, ensureDailyPick, type AllPhaseMastery, type Quest } from '../lib/mastery';
+import { calcStreak, FOUNDATION_QUESTS, PHASE_QUESTS, isTodayCompleted, toggleToday, saveAllMastery, ensureDailyPick, type AllPhaseMastery, type Quest, type MasteryData } from '../lib/mastery';
 import { getIntentionalAction } from '../lib/cycleActions';
 import CamrynAvatar from './ui/CamrynAvatar';
 import type { PersonalNote } from '../App';
@@ -362,8 +362,10 @@ async function applyLogActions(userId: string, actions: LogAction[]): Promise<vo
   }
 }
 
-function buildMasterySnapshot(phaseNumber: number): Record<string, number> {
-  const masteryData = loadMasteryData();
+function buildMasterySnapshot(phaseNumber: number, allMastery?: AllPhaseMastery): Record<string, number> {
+  const pKey = `phase${phaseNumber}` as keyof AllPhaseMastery;
+  const masteryData: MasteryData | undefined = allMastery?.[pKey];
+  if (!masteryData) return {};
   const quests = PHASE_QUESTS[phaseNumber] ?? FOUNDATION_QUESTS;
   const snapshot: Record<string, number> = {};
   for (const q of quests) {
@@ -541,7 +543,7 @@ export default function JournalSection({ userId, session, focusInput, displayNam
       fetchReactionSummary(userId),
       fetchLovesSnapshot(userId),
     ]);
-    const masterySnapshot = buildMasterySnapshot(session.current_phase);
+    const masterySnapshot = buildMasterySnapshot(session.current_phase, allMastery);
     let pendingLinks: SharedLink[] = [];
     const history = buildHistory(todayEntries);
 
