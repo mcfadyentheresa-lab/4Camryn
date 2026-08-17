@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { PROTOCOL, dailyTasks, dailyLearnForToday } from '../lib/protocol';
+import { PROTOCOL, dailyTasks, dailyLearnForToday, TAG_TO_QUEST } from '../lib/protocol';
 import {
   PHASE_QUESTS,
   ensureDailyPick,
@@ -44,13 +44,11 @@ interface MainContentProps {
   frontDoorCompletions?: number[];
 }
 
-function questIdFromTag(tag: string): string | null {
-  if (tag.includes('Hydration'))       return 'morning-hydration';
-  if (tag.includes('Sleep'))           return 'fixed-sleep';
-  if (tag.includes('Gut'))             return 'fiber-goal';
-  if (tag.includes('Self-Assessment')) return 'daily-checkin';
-  if (tag.includes('Daily check-in'))  return 'daily-checkin';
-  return null;
+function questIdFromTag(tag: string, phase: number): string | null {
+  const questId = TAG_TO_QUEST[tag];
+  if (!questId) return null;
+  const phaseQuests = PHASE_QUESTS[phase] ?? PHASE_QUESTS[1];
+  return phaseQuests.some((q) => q.id === questId) ? questId : null;
 }
 
 function phaseKey(phase: number): keyof AllPhaseMastery {
@@ -167,7 +165,7 @@ export default function MainContent({
     setCheckedItems((prev) => {
       const next = newChecked ?? [...prev];
       if (!newChecked) next[idx] = !next[idx];
-      const questId = questIdFromTag(tasks[idx]?.tag || '');
+      const questId = questIdFromTag(tasks[idx]?.tag || '', session.current_phase);
       if (questId) autoMarkQuest(questId, next[idx]);
 
       // Auto-save on any task toggle
@@ -215,7 +213,7 @@ export default function MainContent({
     // Accumulation tasks reset visually each day unless completed again today;
     // progress is based on dated completion history, not a carry-forward boolean.
     const derived = tasks.map((task) => {
-      const questId = questIdFromTag(task.tag);
+      const questId = questIdFromTag(task.tag, session.current_phase);
       if (!questId) return false;
       const qs = masteryData.quests[questId];
       return qs ? isTodayCompleted(qs.completedDates) : false;
@@ -237,7 +235,7 @@ export default function MainContent({
         if (idx >= 0 && idx < tasks.length && !next[idx]) {
           next[idx] = true;
           changed = true;
-          const questId = questIdFromTag(tasks[idx]?.tag || '');
+          const questId = questIdFromTag(tasks[idx]?.tag || '', session.current_phase);
           if (questId) autoMarkQuest(questId, true);
           autoMarkQuest('daily-checkin', true);
         }

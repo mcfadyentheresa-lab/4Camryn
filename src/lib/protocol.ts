@@ -1,3 +1,5 @@
+import { PHASE_QUESTS } from './mastery';
+
 export const PROTOCOL = {
   phases: [
     {
@@ -724,4 +726,89 @@ export function dailyTasks(
   }
 
   return [phaseTask, cycleTask, supportTask];
+}
+
+// Maps exact daily-task tags to mastery quest IDs within the same phase.
+// null means the task behaviour doesn't correspond to any quest.
+export const TAG_TO_QUEST: Record<string, string | null> = {
+  // Phase 1 — Foundation
+  'Foundation · Hydration': 'morning-hydration',
+  'Foundation · Gut': 'fiber-goal',
+  'Foundation · Awareness': null,
+  'Foundation · Sleep': 'fixed-sleep',
+  // Phase 2 — Ignition
+  'Ignition · Nutrition': 'protein-target',
+  'Ignition · Eating Window': 'eating-window',
+  'Ignition · Movement': 'daily-walk',
+  'Ignition · Strength': 'strength-2x',
+  'Ignition · Skincare': 'skincare-routine',
+  // Phase 3 — Build
+  'Build · Hormones': 'hormone-stack',
+  'Build · Body Composition': 'strength-3x',
+  'Build · Cycle-Adapted Training': 'cycle-training',
+  'Build · Longevity': null,
+  // Phase 4 — Integrate
+  'Integrate · Regulation': 'daily-breathwork',
+  'Integrate · Identity': null,
+  'Integrate · Resilience': null,
+  // Phase 5 — Sustain
+  'Sustain · Bone Health': 'bone-loading-weekly',
+  'Sustain · Metabolic Health': 'zone2-cardio',
+  'Sustain · Resilience': null,
+  // Phase 6 — Thrive
+  'Thrive · Reflection': null,
+  'Thrive · Contribution': null,
+  'Thrive · Vision': null,
+  // Cross-phase — Cycle tasks
+  'Cycle · Menstruation': null,
+  'Cycle · Follicular': null,
+  'Cycle · Ovulation': null,
+  'Cycle · Early Luteal': null,
+  'Cycle · Late Luteal': null,
+  'Cycle · Not Tracking': null,
+  // Cross-phase — Support tasks
+  'Stress Response · Regulation': null,
+  'Low Energy · Priority': null,
+  'Protocol · Self-Assessment': 'daily-checkin',
+};
+
+if (import.meta.env.DEV) {
+  const _energies = PROTOCOL.energy;
+  const _stresses = PROTOCOL.stress;
+  const _cycleNames = CYCLE_PHASES.map((p) => p.name);
+  const _phases = PROTOCOL.phases.map((p) => p.id);
+
+  const _tagToPhases = new Map<string, number[]>();
+  for (const _phase of _phases) {
+    for (const _energy of _energies) {
+      for (const _stress of _stresses) {
+        for (const _cycle of _cycleNames) {
+          for (const _task of dailyTasks(_phase, _energy, _stress, _cycle)) {
+            const _arr = _tagToPhases.get(_task.tag) ?? [];
+            if (!_arr.includes(_phase)) _arr.push(_phase);
+            _tagToPhases.set(_task.tag, _arr);
+          }
+        }
+      }
+    }
+  }
+
+  const _missing: string[] = [];
+  const _invalid: string[] = [];
+  for (const [_tag, _phases] of _tagToPhases) {
+    if (!(_tag in TAG_TO_QUEST)) {
+      _missing.push(_tag);
+      continue;
+    }
+    const _questId = TAG_TO_QUEST[_tag];
+    if (_questId === null) continue;
+    const _valid = _phases.some(
+      (p) => PHASE_QUESTS[p]?.some((q) => q.id === _questId) ?? false,
+    );
+    if (!_valid) _invalid.push(`${_tag} → ${_questId} (phases [${_phases.join(', ')}])`);
+  }
+
+  if (_missing.length > 0 || _invalid.length > 0) {
+    console.error('[protocol] TAG_TO_QUEST gaps:', { missingKeys: _missing, invalidQuests: _invalid });
+  }
 }
