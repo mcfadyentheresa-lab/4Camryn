@@ -132,7 +132,7 @@ export default function LovesSection({ userId }: { userId: string }) {
                   key={c.id}
                   type="button"
                   className={`loves-cat-btn ${form.category === c.id ? 'active' : ''}`}
-                  onClick={() => setForm({ ...form, category: c.id })}
+                  onClick={() => setForm((f) => ({ ...f, category: c.id }))}
                 >
                   {c.emoji} {c.label}
                 </button>
@@ -146,7 +146,7 @@ export default function LovesSection({ userId }: { userId: string }) {
                 className="loves-textarea loves-textarea--idea"
                 placeholder="What's the idea? Describe it freely…"
                 value={form.note}
-                onChange={(e) => setForm({ ...form, note: e.target.value })}
+                onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
                 rows={4}
                 autoFocus
               />
@@ -154,7 +154,7 @@ export default function LovesSection({ userId }: { userId: string }) {
                 className="loves-input"
                 placeholder="Short title (optional)"
                 value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
               />
             </>
           ) : (
@@ -163,7 +163,7 @@ export default function LovesSection({ userId }: { userId: string }) {
                 className="loves-input"
                 placeholder={`What ${catMeta(form.category).label.toLowerCase()} do you love?`}
                 value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(); }}
                 autoFocus
               />
@@ -171,7 +171,7 @@ export default function LovesSection({ userId }: { userId: string }) {
                 className="loves-textarea"
                 placeholder="A note about why you love it (optional)"
                 value={form.note}
-                onChange={(e) => setForm({ ...form, note: e.target.value })}
+                onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
                 rows={2}
               />
             </>
@@ -181,7 +181,7 @@ export default function LovesSection({ userId }: { userId: string }) {
             className="loves-input"
             placeholder="Link (optional) — article, recipe, page…"
             value={form.url}
-            onChange={(e) => setForm({ ...form, url: e.target.value })}
+            onChange={(e) => setForm((f) => ({ ...f, url: e.target.value }))}
           />
 
           {/* Image upload */}
@@ -192,7 +192,7 @@ export default function LovesSection({ userId }: { userId: string }) {
                 <button
                   type="button"
                   className="loves-img-remove"
-                  onClick={() => setForm({ ...form, image_url: '' })}
+                  onClick={() => setForm((f) => ({ ...f, image_url: '' }))}
                   aria-label="Remove image"
                 >
                   <svg width="10" height="10" viewBox="0 0 12 12" fill="none">

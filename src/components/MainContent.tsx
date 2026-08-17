@@ -33,7 +33,7 @@ interface MainContentProps {
   userId: string;
   session: Session;
   allMastery: AllPhaseMastery;
-  onAllMasteryChange: (updated: AllPhaseMastery) => void;
+  onAllMasteryChange: (updated: AllPhaseMastery | ((prev: AllPhaseMastery) => AllPhaseMastery)) => void;
   onSaveDay: (complete: number, total: number, checkedItems?: boolean[]) => void;
   onNavigateToJournal?: () => void;
   onNavigateTo?: (view: string) => void;
@@ -97,6 +97,8 @@ export default function MainContent({
   const [todayKey, setTodayKey] = useState(localToday);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedRef = useRef(false);
+  const skipMasterySideEffectsRef = useRef(true);
+  const latestAllMasteryRef = useRef(allMastery);
 
   // Poll for date change at midnight
   useEffect(() => {
@@ -117,27 +119,58 @@ export default function MainContent({
   const scheduleSave = useCallback((updated: AllPhaseMastery) => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
-      saveAllMastery(userId, updated);
+      saveTimerRef.current = null;
+      saveAllMastery(userId, updated).catch((err) => {
+        console.error('mastery save failed:', err);
+      });
     }, 1000);
   }, [userId]);
 
+  // Flush a pending debounced save immediately on unmount (e.g. switching away
+  // from the "today" tab) instead of leaving a raw setTimeout to fire later --
+  // an orphaned timer firing after the fact can land after (and overwrite) a
+  // newer write from elsewhere, like a Journal-driven mastery update.
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = null;
+        saveAllMastery(userId, latestAllMasteryRef.current).catch((err) => {
+          console.error('mastery save failed (unmount flush):', err);
+        });
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Composes via React's functional setState form so that multiple synchronous
+  // calls in the same tick (e.g. marking a task's quest, then daily-checkin,
+  // right after) each build on the previous one instead of racing on a stale
+  // `allMastery` closure and clobbering each other's writes.
   const updateMasteryData = useCallback((updater: (prev: MasteryData) => MasteryData) => {
-    const currentData = ensureDailyPick(allMastery[pKey], quests);
-    const updated = updater(currentData);
-    const newAll: AllPhaseMastery = { ...allMastery, [pKey]: updated };
-    onAllMasteryChange(newAll);
-    scheduleSave(newAll);
+    onAllMasteryChange((prevAll) => {
+      const currentData = ensureDailyPick(prevAll[pKey], quests);
+      const updated = updater(currentData);
+      return updated === currentData ? prevAll : { ...prevAll, [pKey]: updated };
+    });
+  }, [pKey, quests, onAllMasteryChange]);
 
-    const pct = calcProgressPct(updated, quests);
+  // Runs the save/progress/graduation side effects whenever allMastery actually
+  // changes (from this component or elsewhere, e.g. JournalSection), instead of
+  // from inside the state updater above where React may invoke it more than once.
+  useEffect(() => {
+    latestAllMasteryRef.current = allMastery;
+    if (skipMasterySideEffectsRef.current) {
+      skipMasterySideEffectsRef.current = false;
+      return;
+    }
+    scheduleSave(allMastery);
+    const pct = calcProgressPct(masteryData, quests);
     onPhaseProgressChange?.(pct);
-
-    if (isPhaseComplete(updated, quests) && session.current_phase < 3) {
+    if (isPhaseComplete(masteryData, quests) && session.current_phase <= 3) {
       onPhaseComplete?.(session.current_phase);
     }
-    if (isPhaseComplete(updated, quests) && session.current_phase === 3) {
-      onPhaseComplete?.(3);
-    }
-  }, [allMastery, pKey, quests, onAllMasteryChange, scheduleSave, onPhaseProgressChange, onPhaseComplete, session.current_phase]);
+  }, [allMastery]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const autoMarkQuest = useCallback((questId: string, shouldMark: boolean) => {
     updateMasteryData((prev) => {
@@ -212,9 +245,12 @@ export default function MainContent({
   useEffect(() => {
     // Accumulation tasks reset visually each day unless completed again today;
     // progress is based on dated completion history, not a carry-forward boolean.
-    const derived = tasks.map((task) => {
+    // Tasks with no quest behind them (e.g. the cycle task) have no mastery data
+    // to derive from, so fall back to today's Front Door completions instead of
+    // unconditionally false -- otherwise any unrelated quest update wipes them.
+    const derived = tasks.map((task, idx) => {
       const questId = questIdFromTag(task.tag, session.current_phase);
-      if (!questId) return false;
+      if (!questId) return frontDoorCompletions.includes(idx);
       const qs = masteryData.quests[questId];
       return qs ? isTodayCompleted(qs.completedDates) : false;
     });

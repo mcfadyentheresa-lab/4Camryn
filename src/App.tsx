@@ -558,7 +558,14 @@ function App() {
       phase5: { quests: {}, pickDate: '', pickId: '' },
       phase6: { quests: {}, pickDate: '', pickId: '' },
     };
-    await saveAllMastery(user.id, blank);
+    try {
+      await saveAllMastery(user.id, blank);
+    } catch (err) {
+      console.error('protocol restart failed (mastery reset):', err);
+      setSaveErrorMsg('Could not restart the protocol. Please try again.');
+      saveRetryFnRef.current = () => handleProtocolRestart();
+      return;
+    }
     setAllMastery(blank);
     const { data, error } = await supabase
       .from('camryn_sessions')

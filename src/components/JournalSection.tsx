@@ -414,6 +414,14 @@ export default function JournalSection({ userId, session, focusInput, displayNam
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const threadRef = useRef<HTMLDivElement>(null);
+  // Chat replies resolve after an await; by then `allMastery` (captured from
+  // the render active when the message was sent) can be behind whatever the
+  // "today" tab has since done. Read this ref instead of the prop when
+  // merging quest completions, so the merge is against the current state.
+  const latestAllMasteryRef = useRef(allMastery);
+  useEffect(() => {
+    latestAllMasteryRef.current = allMastery;
+  }, [allMastery]);
 
   const hourOfDayNow = new Date().getHours();
   const timeOfDayNow = getTimeOfDay(hourOfDayNow);
@@ -603,11 +611,15 @@ export default function JournalSection({ userId, session, focusInput, displayNam
           pendingLinks = json.sharedLinks as SharedLink[];
         }
 
-        // Apply recognized quest completions to mastery
+        // Apply recognized quest completions to mastery. Reads from the ref
+        // (not the `allMastery` prop) so this merges against whatever the
+        // "today" tab has done since this message was sent, not a snapshot
+        // from before the await for Camryn's reply.
+        const currentAllMastery = latestAllMasteryRef.current;
         if (
           Array.isArray(json.recognizedQuests) &&
           json.recognizedQuests.length > 0 &&
-          allMastery &&
+          currentAllMastery &&
           onMasteryUpdate
         ) {
           const pKey = session.current_phase === 2 ? 'phase2'
@@ -616,7 +628,7 @@ export default function JournalSection({ userId, session, focusInput, displayNam
             : session.current_phase === 5 ? 'phase5'
             : session.current_phase === 6 ? 'phase6'
             : 'phase1';
-          let phaseData = ensureDailyPick(allMastery[pKey as keyof AllPhaseMastery], phaseQuests);
+          let phaseData = ensureDailyPick(currentAllMastery[pKey as keyof AllPhaseMastery], phaseQuests);
           let changed = false;
           for (const questId of json.recognizedQuests as string[]) {
             const qs = phaseData.quests[questId];
@@ -632,9 +644,11 @@ export default function JournalSection({ userId, session, focusInput, displayNam
             changed = true;
           }
           if (changed) {
-            const updated: AllPhaseMastery = { ...allMastery, [pKey]: phaseData };
+            const updated: AllPhaseMastery = { ...currentAllMastery, [pKey]: phaseData };
             onMasteryUpdate(updated);
-            saveAllMastery(userId, updated);
+            saveAllMastery(userId, updated).catch((err) => {
+              console.error('[journal] mastery save failed:', err);
+            });
           }
         }
 

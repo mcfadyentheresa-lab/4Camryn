@@ -261,10 +261,13 @@ export async function loadAllMastery(userId: string): Promise<AllPhaseMastery> {
 }
 
 export async function saveAllMastery(userId: string, all: AllPhaseMastery): Promise<void> {
-  await supabase
+  const { error } = await supabase
     .from('camryn_sessions')
     .update({ mastery_data: all as any })
     .eq('user_id', userId);
+  if (error) {
+    throw error;
+  }
 }
 
 // ── Daily pick ────────────────────────────────────────────────────────────────

@@ -560,7 +560,7 @@ export default function FoodSection({ userId, currentPhase = 1, cyclePhase = 'No
                       className="body-input"
                       style={{ flex: 1 }}
                       value={draft.description}
-                      onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+                      onChange={(e) => setDraft((prev) => prev ? { ...prev, description: e.target.value } : prev)}
                       placeholder="Food name *"
                       autoFocus
                     />
@@ -571,7 +571,7 @@ export default function FoodSection({ userId, currentPhase = 1, cyclePhase = 'No
                       className="body-input"
                       style={{ flex: 1 }}
                       value={draft.brand_name}
-                      onChange={(e) => setDraft({ ...draft, brand_name: e.target.value })}
+                      onChange={(e) => setDraft((prev) => prev ? { ...prev, brand_name: e.target.value } : prev)}
                       placeholder="Brand (optional)"
                     />
                     <input
@@ -579,7 +579,7 @@ export default function FoodSection({ userId, currentPhase = 1, cyclePhase = 'No
                       className="body-input"
                       style={{ width: '120px' }}
                       value={draft.serving_size}
-                      onChange={(e) => setDraft({ ...draft, serving_size: e.target.value })}
+                      onChange={(e) => setDraft((prev) => prev ? { ...prev, serving_size: e.target.value } : prev)}
                       placeholder="Serving size"
                     />
                   </div>
@@ -601,7 +601,7 @@ export default function FoodSection({ userId, currentPhase = 1, cyclePhase = 'No
                           step="0.1"
                           className="body-input"
                           value={draft[key] as string}
-                          onChange={(e) => setDraft({ ...draft, [key]: e.target.value })}
+                          onChange={(e) => setDraft((prev) => prev ? { ...prev, [key]: e.target.value } : prev)}
                           placeholder={placeholder}
                         />
                       </div>
@@ -611,7 +611,7 @@ export default function FoodSection({ userId, currentPhase = 1, cyclePhase = 'No
                     type="text"
                     className="body-input"
                     value={draft.notes}
-                    onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
+                    onChange={(e) => setDraft((prev) => prev ? { ...prev, notes: e.target.value } : prev)}
                     placeholder="Note (how it felt, cravings, etc.)"
                   />
                   <div className="food-form-footer">

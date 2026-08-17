@@ -546,7 +546,7 @@ export default function BodySection({
                 <button
                   key={t}
                   className={`seg-btn ${exerciseDraft.movement_type === t ? 'active' : ''}`}
-                  onClick={() => setExerciseDraft({ ...exerciseDraft, movement_type: t })}
+                  onClick={() => setExerciseDraft((prev) => prev ? { ...prev, movement_type: t } : prev)}
                 >
                   {t}
                 </button>
@@ -561,7 +561,7 @@ export default function BodySection({
                   max="300"
                   className="body-input"
                   value={exerciseDraft.duration_min}
-                  onChange={(e) => setExerciseDraft({ ...exerciseDraft, duration_min: e.target.value })}
+                  onChange={(e) => setExerciseDraft((prev) => prev ? { ...prev, duration_min: e.target.value } : prev)}
                   placeholder="e.g. 30"
                 />
               </div>
@@ -572,7 +572,7 @@ export default function BodySection({
                     <button
                       key={level}
                       className={`food-profile-chip ${exerciseDraft.intensity === level ? 'active' : ''}`}
-                      onClick={() => setExerciseDraft({ ...exerciseDraft, intensity: level })}
+                      onClick={() => setExerciseDraft((prev) => prev ? { ...prev, intensity: level } : prev)}
                     >
                       {intensityLabel(level)}
                     </button>
@@ -584,7 +584,7 @@ export default function BodySection({
               type="text"
               className="body-input"
               value={exerciseDraft.notes}
-              onChange={(e) => setExerciseDraft({ ...exerciseDraft, notes: e.target.value })}
+              onChange={(e) => setExerciseDraft((prev) => prev ? { ...prev, notes: e.target.value } : prev)}
               placeholder="Note (optional)"
             />
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px', gap: '8px' }}>
