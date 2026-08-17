@@ -99,6 +99,17 @@ export default function MainContent({
   const savedRef = useRef(false);
   const skipMasterySideEffectsRef = useRef(true);
   const latestAllMasteryRef = useRef(allMastery);
+  // Side effects for a checkedItems change (quest marks, onSaveDay, celebration)
+  // run from a useEffect below, not from inside the setCheckedItems updater --
+  // updater functions run as part of React's render phase for this component,
+  // and calling another component's setState (autoMarkQuest/onSaveDay both
+  // eventually call setState on App) from there triggers "Cannot update a
+  // component while rendering a different component".
+  const pendingCheckedSideEffectsRef = useRef<{
+    next: boolean[];
+    touchedIndices: number[];
+    origin: 'toggle' | 'frontDoor';
+  } | null>(null);
 
   // Poll for date change at midnight
   useEffect(() => {
@@ -198,25 +209,43 @@ export default function MainContent({
     setCheckedItems((prev) => {
       const next = newChecked ?? [...prev];
       if (!newChecked) next[idx] = !next[idx];
+      pendingCheckedSideEffectsRef.current = { next: [...next], touchedIndices: [idx], origin: 'toggle' };
+      return next;
+    });
+  }, []);
+
+  // Runs the quest marks / auto-save / celebration for a checkedItems change
+  // queued by toggleTask or the Front Door completions effect below, once the
+  // state has actually committed -- see the ref comment above for why this
+  // can't live inside the setCheckedItems updater itself.
+  useEffect(() => {
+    const pending = pendingCheckedSideEffectsRef.current;
+    if (!pending) return;
+    pendingCheckedSideEffectsRef.current = null;
+    const { next, touchedIndices, origin } = pending;
+
+    for (const idx of touchedIndices) {
       const questId = questIdFromTag(tasks[idx]?.tag || '', session.current_phase);
       if (questId) autoMarkQuest(questId, next[idx]);
+    }
 
-      // Auto-save on any task toggle
-      const doneCount = next.filter(Boolean).length;
+    const doneCount = next.filter(Boolean).length;
+
+    if (origin === 'toggle') {
       if (!savedRef.current || doneCount > 0) {
         autoMarkQuest('daily-checkin', true);
         onSaveDay(doneCount, 3, next);
         savedRef.current = true;
       }
-
-      // Enter persistent completion state when all 3 are done
-      if (doneCount === 3 && !prev.every(Boolean)) {
+      if (doneCount === 3) {
         setTimeout(() => setShowCelebration(true), 200);
       }
-
-      return next;
-    });
-  }, [tasks, autoMarkQuest, onSaveDay]);
+    } else {
+      autoMarkQuest('daily-checkin', true);
+      onSaveDay(doneCount, 3, next);
+      if (next.every(Boolean)) setShowCelebration(true);
+    }
+  }, [checkedItems]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleMasteryToggle = useCallback((id: string) => {
     updateMasteryData((prev) => {
@@ -266,22 +295,16 @@ export default function MainContent({
     if (frontDoorCompletions.length === 0) return;
     setCheckedItems((prev) => {
       const next = [...prev];
-      let changed = false;
+      const touchedIndices: number[] = [];
       frontDoorCompletions.forEach((idx) => {
         if (idx >= 0 && idx < tasks.length && !next[idx]) {
           next[idx] = true;
-          changed = true;
-          const questId = questIdFromTag(tasks[idx]?.tag || '', session.current_phase);
-          if (questId) autoMarkQuest(questId, true);
-          autoMarkQuest('daily-checkin', true);
+          touchedIndices.push(idx);
         }
       });
-      if (changed) {
-        const doneCount = next.filter(Boolean).length;
-        onSaveDay(doneCount, 3, next);
-        if (next.every(Boolean)) setShowCelebration(true);
-      }
-      return changed ? next : prev;
+      if (touchedIndices.length === 0) return prev;
+      pendingCheckedSideEffectsRef.current = { next: [...next], touchedIndices, origin: 'frontDoor' };
+      return next;
     });
   }, [frontDoorCompletions]); // eslint-disable-line react-hooks/exhaustive-deps
 
