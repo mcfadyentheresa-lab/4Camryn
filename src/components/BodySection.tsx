@@ -117,7 +117,7 @@ export default function BodySection({
 }: BodySectionProps) {
   const today = new Date().toISOString().split('T')[0];
   const [entry, setEntry] = useState<BodyEntry>(EMPTY);
-  const [saveLabel, startSave, doneSave] = useSaveIndicator();
+  const [saveLabel, startSave, doneSave, failSave] = useSaveIndicator();
   const pendingRef = useRef<BodyEntry>(EMPTY);
   const [showCycleLearning, setShowCycleLearning] = useState(false);
   const [showDateInput, setShowDateInput] = useState(!!lastPeriodDate);
@@ -126,7 +126,7 @@ export default function BodySection({
   const [exerciseLogs, setExerciseLogs] = useState<ExerciseLog[]>([]);
   const [exerciseDraft, setExerciseDraft] = useState<ExerciseDraft | null>(null);
   const [exerciseOpen, setExerciseOpen] = useState(false);
-  const [exerciseSave, startExSave, doneExSave] = useSaveIndicator();
+  const [exerciseSave, startExSave, doneExSave, failExSave] = useSaveIndicator();
 
   // Cycle guidance state
   const [guidanceOpen, setGuidanceOpen] = useState(false);
@@ -169,7 +169,7 @@ export default function BodySection({
 
   const persist = async (e: BodyEntry) => {
     startSave();
-    await supabase.from('camryn_body').upsert(
+    const { error } = await supabase.from('camryn_body').upsert(
       {
         user_id: userId,
         entry_date: today,
@@ -183,6 +183,11 @@ export default function BodySection({
       },
       { onConflict: 'user_id,entry_date' }
     );
+    if (error) {
+      console.error('body entry save failed:', error);
+      failSave();
+      return;
+    }
     doneSave();
   };
 
@@ -217,7 +222,7 @@ export default function BodySection({
   const handleAddExercise = async () => {
     if (!exerciseDraft) return;
     startExSave();
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('camryn_exercise')
       .insert([{
         user_id: userId,
@@ -229,13 +234,23 @@ export default function BodySection({
       }])
       .select('id, movement_type, duration_min, intensity, notes')
       .maybeSingle();
+    if (error) {
+      console.error('exercise log save failed:', error);
+      failExSave();
+      return;
+    }
     doneExSave();
     if (data) setExerciseLogs((prev) => [...prev, data as ExerciseLog]);
     setExerciseDraft(null);
   };
 
   const handleDeleteExercise = async (id: string) => {
-    await supabase.from('camryn_exercise').delete().eq('id', id);
+    const { error } = await supabase.from('camryn_exercise').delete().eq('id', id);
+    if (error) {
+      console.error('exercise log delete failed:', error);
+      failExSave();
+      return;
+    }
     setExerciseLogs((prev) => prev.filter((e) => e.id !== id));
   };
 

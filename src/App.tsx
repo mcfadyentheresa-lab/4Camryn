@@ -110,8 +110,10 @@ function App() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [saveStatus, setSaveStatus] = useState('Not saved yet');
+  // No UI currently changes this -- the toggle was wired to Header but
+  // Header never rendered it. Left as a plain value rather than state
+  // until the aesthetic pass adds a real theme switcher.
+  const theme: 'light' | 'dark' = 'light';
   const [view, setView] = useState<AppView>(() => {
     const saved = localStorage.getItem('camryn_view');
     const valid: AppView[] = ['today', 'body', 'food', 'confidence', 'space', 'journal', 'loves', 'profile'];
@@ -276,14 +278,19 @@ function App() {
     }
     frontDoorChannelRef.current = subscribeFrontDoorCompletions(userId, setFrontDoorCompletions);
 
-    // Compute daily save streak and days-since-last-save
-    const ninetyDaysAgo = new Date();
-    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+    // Compute daily save streak and days-since-last-save.
+    // Deliberately no date-range filter here -- this used to only look back
+    // 90 days, which silently truncated any streak longer than that (the
+    // backward-walking loop below would hit a day outside the fetched
+    // window and stop, even though the real streak continued further back)
+    // and made daysSinceLastSave/the "welcome back" messaging go blank for
+    // anyone returning after more than 90 days away, instead of showing the
+    // real gap. One row per day for this user is small even after years of
+    // use, so fetching the full history isn't a real cost.
     const { data: savesData } = await supabase
       .from('camryn_daily_saves')
       .select('save_date, tasks_complete, tasks_total')
       .eq('user_id', userId)
-      .gte('save_date', ninetyDaysAgo.toISOString().split('T')[0])
       .order('save_date', { ascending: false });
     if (savesData && savesData.length > 0) {
       const dates = new Set(savesData.map((r: any) => r.save_date as string));
@@ -383,11 +390,6 @@ function App() {
 
     const attemptSave = async () => {
       setSyncDot('saving');
-      setSaveStatus(
-        isComplete
-          ? `Saving · ${tasksComplete}/${tasksTotal} tasks complete`
-          : `Saving · progress paused at ${tasksComplete}/${tasksTotal}`
-      );
 
       const { error: dailySaveError } = await supabase
         .from('camryn_daily_saves')
@@ -404,7 +406,6 @@ function App() {
       if (dailySaveError) {
         console.error('dailySave upsert failed:', dailySaveError);
         setSyncDot('error');
-        setSaveStatus('Save failed — tap retry');
         setSaveErrorMsg('Could not save today\u2019s progress. Your work is still here — just needs to sync.');
         saveRetryFnRef.current = attemptSave;
         return;
@@ -423,11 +424,6 @@ function App() {
 
       setSyncDot('synced');
       setSavedToday(true);
-      setSaveStatus(
-        isComplete
-          ? `Saved just now · ${tasksComplete}/${tasksTotal} tasks complete`
-          : `Saved just now · progress paused at ${tasksComplete}/${tasksTotal}`
-      );
       syncToFrontDoor({
         userId: user.id,
         energy: session.energy,
@@ -628,7 +624,7 @@ function App() {
   };
 
   return (
-    <div data-theme={theme} data-night={isNightMode ? 'true' : undefined} style={{ background: 'var(--bg)', color: 'var(--ink)', transition: 'background 0.6s ease, color 0.6s ease' }}>
+    <div data-theme={theme} data-night={isNightMode ? 'true' : undefined} style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--ink)', transition: 'background 0.6s ease, color 0.6s ease' }}>
       {/* Daily check-in modal — once per day */}
       {showCheckin && session && (
         <DailyCheckinModal
@@ -644,8 +640,11 @@ function App() {
         <MorningNudgePrompt userId={user.id} />
       )}
 
-      {/* Phase graduation modal — appears over the app */}
-      {graduatingPhase !== null && graduatingPhase < 6 && (
+      {/* Phase graduation modal — appears over the app. PhaseGraduationModal
+          itself branches on completedPhase === 6 to show the "Complete
+          Protocol" ending instead of a "start next phase" teaser, so this
+          renders for every phase, not just 1-5. */}
+      {graduatingPhase !== null && (
         <PhaseGraduationModal
           completedPhase={graduatingPhase}
           displayName={displayName}
@@ -667,9 +666,6 @@ function App() {
 
       <div className="app">
         <Header
-          theme={theme}
-          onThemeToggle={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-          saveStatus={saveStatus}
           syncDot={syncDot}
           view={view}
           onViewChange={handleViewChange}

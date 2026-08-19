@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { getWeeklyFocus, protocolWeekFromSaveCount } from '../lib/weeklyFocus';
 
 interface Props {
@@ -16,102 +16,116 @@ const CYCLE_COLORS: Record<string, { bg: string; dot: string; label: string }> =
   'Not sure':     { bg: '#eaf3f7', dot: '#2e9bbf', label: '#1f7a99' },
 };
 
-function todayKey() {
-  return `wf-seen-${new Date().toISOString().split('T')[0]}`;
+const THEME_EMOJI: Record<string, string> = {
+  'everything-water': '💧',
+  'sleep-environment': '🌙',
+  'gut-foundation': '🌿',
+  'cycle-awareness': '🔄',
+  'strength-foundations': '💪',
+  'stress-nervous-system': '🧘',
+  'protein-foundations': '🥗',
+  'your-space': '🏠',
+  'hormone-foundations': '⚡',
+  'confidence-identity': '✨',
+  'sleep-depth': '😴',
+  'body-composition': '🏋️',
+  'relationships-energy': '🤝',
+  'joints-longevity': '🦴',
+  'growth-mindset': '📈',
+  'micronutrients': '💊',
+  'purpose-meaning': '🧭',
+  'cold-exposure': '❄️',
+  'skin-inside-out': '🧴',
+};
+
+// Burst directions for the "poof" dismiss, spread in a fan above the Got it button.
+const POOF_ANGLES = [-70, -35, -10, 10, 35, 70];
+const POOF_DURATION_MS = 380;
+
+function scienceKey() {
+  return `wf-science-read-${new Date().toISOString().split('T')[0]}`;
 }
 
 export default function WeeklyFocusCard({ phase, cyclePhaseName, saveCount }: Props) {
   const [open, setOpen] = useState(false);
-  const [seen, setSeen] = useState(() => !!localStorage.getItem(todayKey()));
+  const [poofing, setPoofing] = useState(false);
+  const [readToday, setReadToday] = useState(() => !!localStorage.getItem(scienceKey()));
 
   const week = protocolWeekFromSaveCount(saveCount);
   const { theme, card, weekNumber } = getWeeklyFocus(phase, cyclePhaseName, week);
-
   const colors = CYCLE_COLORS[cyclePhaseName] ?? CYCLE_COLORS['Not sure'];
+  const emoji = THEME_EMOJI[theme.id] ?? '✦';
 
-  useEffect(() => {
-    if (open) {
-      setSeen(true);
-      localStorage.setItem(todayKey(), '1');
-    }
-  }, [open]);
-
-  const handleOpen = () => setOpen(true);
-  const handleClose = () => setOpen(false);
+  const handleGotIt = () => {
+    setPoofing(true);
+    setTimeout(() => {
+      setOpen(false);
+      setPoofing(false);
+      setReadToday(true);
+      localStorage.setItem(scienceKey(), '1');
+    }, POOF_DURATION_MS);
+  };
 
   return (
-    <>
-      {/* Collapsed card */}
-      <div
-        className="wf-card"
-        style={{ background: colors.bg }}
-        onClick={handleOpen}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => e.key === 'Enter' && handleOpen()}
-        aria-label={`Open this week's focus: ${theme.name}`}
-      >
-        <div className="wf-card-left">
-          <div className="wf-week-label" style={{ color: colors.label }}>
-            Week {weekNumber} Focus
-            {!seen && <span className="wf-unread-dot" style={{ background: colors.dot }} />}
-          </div>
-          <div className="wf-theme-name">{theme.name}</div>
-          <div className="wf-card-teaser">{card.headline}</div>
-        </div>
-        <div className="wf-card-cta" style={{ color: colors.label }}>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M6 3.5L10.5 8L6 12.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </div>
+    <div className="wf-card2" style={{ background: colors.bg }}>
+      <div className="wf-head">
+        <div className="wf-icon-circle" style={{ background: colors.dot }} aria-hidden="true">{emoji}</div>
+        <div className="wf-eyebrow" style={{ color: colors.label }}>Week {weekNumber} · {cyclePhaseName}</div>
       </div>
 
-      {/* Drawer */}
-      {open && (
-        <>
-          <div className="task-drawer-backdrop" onClick={handleClose} />
-          <div className="task-drawer wf-drawer" onClick={(e) => e.stopPropagation()}>
-            <div className="task-drawer-handle" />
-            <div className="task-drawer-header">
-              <div className="task-drawer-meta">
-                <span className="task-drawer-category wf-drawer-category" style={{ color: colors.label, background: colors.bg }}>
-                  Week {weekNumber} · {theme.name}
-                </span>
-              </div>
-              <button type="button" className="task-drawer-close" onClick={handleClose} aria-label="Close">✕</button>
-            </div>
+      <div className="wf-headline">{theme.name}</div>
+      <p className="wf-hook">{theme.hook}</p>
 
-            <div className="task-drawer-body">
-              {/* Hook line */}
-              <p className="wf-drawer-hook">{theme.hook}</p>
+      <div className="wf-today-label" style={{ color: colors.label }}>Today</div>
+      <p className="wf-today-text">{card.takeaway}</p>
 
-              <div className="task-drawer-divider" />
-
-              {/* Today's lesson */}
-              <div className="wf-lesson-label">Today&rsquo;s lesson</div>
-              <h3 className="task-drawer-short-title">{card.headline}</h3>
-              <p className="task-drawer-explanation wf-lesson-body">{card.body}</p>
-
-              {/* Takeaway pill */}
-              <div className="wf-takeaway" style={{ background: colors.bg, borderLeft: `3px solid ${colors.dot}` }}>
-                <span className="wf-takeaway-label" style={{ color: colors.label }}>Your takeaway</span>
-                <p className="wf-takeaway-text">{card.takeaway}</p>
-              </div>
-            </div>
-
-            <div className="task-drawer-footer">
-              <button
-                type="button"
-                className="wf-close-btn"
-                style={{ background: colors.dot }}
-                onClick={handleClose}
-              >
-                Got it
-              </button>
-            </div>
-          </div>
-        </>
+      {!open && !readToday && (
+        <button
+          type="button"
+          className="wf-sci-toggle"
+          style={{ background: colors.dot }}
+          onClick={() => setOpen(true)}
+        >
+          See the full science
+        </button>
       )}
-    </>
+
+      {readToday && !open && (
+        <div className="wf-sci-read" style={{ color: colors.label }}>
+          <span className="wf-sci-read-check" style={{ background: colors.dot }}>✓</span>
+          You&rsquo;ve got today&rsquo;s science
+        </div>
+      )}
+
+      {open && (
+        <div className={`wf-sci-panel${poofing ? ' wf-poofing' : ''}`}>
+          <h3 className="wf-sci-title">{card.headline}</h3>
+          <p className="wf-sci-body">{card.body}</p>
+          <button type="button" className="wf-sci-gotit" onClick={handleGotIt}>Got it</button>
+
+          {poofing && (
+            <div className="wf-poof-burst" aria-hidden="true">
+              {POOF_ANGLES.map((deg) => {
+                const rad = (deg * Math.PI) / 180;
+                const dist = 46;
+                const bx = Math.round(Math.sin(rad) * dist);
+                const by = Math.round(-Math.cos(rad) * dist);
+                return (
+                  <span
+                    key={deg}
+                    className="wf-poof-particle"
+                    style={{
+                      background: colors.dot,
+                      '--bx': `${bx}px`,
+                      '--by': `${by}px`,
+                    } as React.CSSProperties}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

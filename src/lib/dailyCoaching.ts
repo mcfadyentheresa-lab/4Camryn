@@ -165,7 +165,6 @@ export function getPhasePosition(
   phaseStartSaveCount = 0,
 ): PhasePosition {
   const span = PHASE_WEEK_SPANS[protocolPhase] ?? PHASE_WEEK_SPANS[1];
-  const totalDaysInPhase = span.totalWeeks * 7;
   // Days relative to when the user entered this phase.
   // For existing users where phaseStartSaveCount is 0 (column defaulted) and
   // protocolPhase > 1, we fall back to a 1-based floor so the strip shows
@@ -173,8 +172,14 @@ export function getPhasePosition(
   const relative = phaseStartSaveCount > 0 || protocolPhase === 1
     ? Math.max(saveCount - phaseStartSaveCount, 1)
     : 1;
-  const dayInPhase = Math.min(relative, totalDaysInPhase);
-  const weekInPhase = Math.min(Math.ceil(dayInPhase / 7), span.totalWeeks);
+  // No cap here -- this used to clamp at totalDaysInPhase/totalWeeks, which
+  // meant anyone who took longer than a phase's nominal length (missed days,
+  // slower pace) would see the day/week counter freeze at the phase's last
+  // day forever, even as real elapsed days kept climbing. totalWeeksInPhase
+  // is a planned length, not a hard ceiling, so dayInPhase/weekInPhase should
+  // keep counting past it rather than silently stall.
+  const dayInPhase = relative;
+  const weekInPhase = Math.ceil(dayInPhase / 7);
   return { dayInPhase, weekInPhase, totalWeeksInPhase: span.totalWeeks };
 }
 

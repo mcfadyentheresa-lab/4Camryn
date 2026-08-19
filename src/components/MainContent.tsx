@@ -155,9 +155,9 @@ export default function MainContent({
   }, []);
 
   // Composes via React's functional setState form so that multiple synchronous
-  // calls in the same tick (e.g. marking a task's quest, then daily-checkin,
-  // right after) each build on the previous one instead of racing on a stale
-  // `allMastery` closure and clobbering each other's writes.
+  // calls in the same tick (e.g. marking several tasks' quests at once from a
+  // Front Door sync batch) each build on the previous one instead of racing
+  // on a stale `allMastery` closure and clobbering each other's writes.
   const updateMasteryData = useCallback((updater: (prev: MasteryData) => MasteryData) => {
     onAllMasteryChange((prevAll) => {
       const currentData = ensureDailyPick(prevAll[pKey], quests);
@@ -178,7 +178,10 @@ export default function MainContent({
     scheduleSave(allMastery);
     const pct = calcProgressPct(masteryData, quests);
     onPhaseProgressChange?.(pct);
-    if (isPhaseComplete(masteryData, quests) && session.current_phase <= 3) {
+    // No phase-number gate here -- this used to be capped at <= 3 (a leftover
+    // from early development), which meant completing Phase 4/5/6's quests
+    // never triggered graduation at all. Every phase should fire the same way.
+    if (isPhaseComplete(masteryData, quests)) {
       onPhaseComplete?.(session.current_phase);
     }
   }, [allMastery]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -229,11 +232,17 @@ export default function MainContent({
       if (questId) autoMarkQuest(questId, next[idx]);
     }
 
+    // Saving today's progress happens on any toggle -- but marking the
+    // "daily-checkin" quest specifically does not; that's handled above,
+    // per-task, via questIdFromTag (Foundation · Awareness -> daily-checkin)
+    // now that the mapping is correct. A blanket mark-on-any-toggle here
+    // used to make completing *any* task also check off the "Take your
+    // 5-minute check-in" task's box, regardless of which task was actually
+    // done.
     const doneCount = next.filter(Boolean).length;
 
     if (origin === 'toggle') {
       if (!savedRef.current || doneCount > 0) {
-        autoMarkQuest('daily-checkin', true);
         onSaveDay(doneCount, 3, next);
         savedRef.current = true;
       }
@@ -241,7 +250,6 @@ export default function MainContent({
         setTimeout(() => setShowCelebration(true), 200);
       }
     } else {
-      autoMarkQuest('daily-checkin', true);
       onSaveDay(doneCount, 3, next);
       if (next.every(Boolean)) setShowCelebration(true);
     }

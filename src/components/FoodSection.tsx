@@ -117,7 +117,7 @@ export default function FoodSection({ userId, currentPhase = 1, cyclePhase = 'No
   const [profileOpen, setProfileOpen] = useState(false);
   const [draft, setDraft] = useState<AddMealDraft | null>(null);
   const [showScanner, setShowScanner] = useState(false);
-  const [saveLabel, startSave, doneSave] = useSaveIndicator();
+  const [saveLabel, startSave, doneSave, failSave] = useSaveIndicator();
   const pendingRef = useRef<DailySummary>(EMPTY_SUMMARY);
   const profilePendingRef = useRef<FoodProfile>(EMPTY_PROFILE);
 
@@ -172,18 +172,30 @@ export default function FoodSection({ userId, currentPhase = 1, cyclePhase = 'No
 
   const persistSummary = async (s: DailySummary) => {
     startSave();
-    await supabase.from('camryn_food_daily').upsert(
+    const { error } = await supabase.from('camryn_food_daily').upsert(
       { user_id: userId, entry_date: today, ...s, updated_at: new Date().toISOString() },
       { onConflict: 'user_id,entry_date' }
     );
+    if (error) {
+      console.error('food daily summary save failed:', error);
+      failSave();
+      return;
+    }
     doneSave();
   };
 
   const persistProfile = async (p: FoodProfile) => {
-    await supabase.from('camryn_food_profile').upsert(
+    startSave();
+    const { error } = await supabase.from('camryn_food_profile').upsert(
       { user_id: userId, ...p, updated_at: new Date().toISOString() },
       { onConflict: 'user_id' }
     );
+    if (error) {
+      console.error('food profile save failed:', error);
+      failSave();
+      return;
+    }
+    doneSave();
   };
 
   const updateSummary = (patch: Partial<DailySummary>) => {
@@ -196,7 +208,7 @@ export default function FoodSection({ userId, currentPhase = 1, cyclePhase = 'No
 
   const handleSaveEntry = async () => {
     if (!draft || !draft.description.trim()) return;
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('camryn_food_entries')
       .insert([{
         user_id: userId,
@@ -217,12 +229,22 @@ export default function FoodSection({ userId, currentPhase = 1, cyclePhase = 'No
       .select('id, meal_type, description, brand_name, serving_size, calories, protein_g, carbs_g, fat_g, fiber_g, sugar_g, barcode, source, notes')
       .maybeSingle();
 
+    if (error) {
+      console.error('food entry save failed:', error);
+      failSave();
+      return;
+    }
     if (data) setEntries((prev) => [...prev, data as FoodEntry]);
     setDraft(null);
   };
 
   const handleDeleteEntry = async (id: string) => {
-    await supabase.from('camryn_food_entries').delete().eq('id', id);
+    const { error } = await supabase.from('camryn_food_entries').delete().eq('id', id);
+    if (error) {
+      console.error('food entry delete failed:', error);
+      failSave();
+      return;
+    }
     setEntries((prev) => prev.filter((e) => e.id !== id));
   };
 

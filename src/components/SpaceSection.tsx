@@ -26,7 +26,7 @@ interface SpaceSectionProps {
 export default function SpaceSection({ userId }: SpaceSectionProps) {
   const today = new Date().toISOString().split('T')[0];
   const [entry, setEntry] = useState<SpaceEntry>(EMPTY);
-  const [saveLabel, startSave, doneSave] = useSaveIndicator();
+  const [saveLabel, startSave, doneSave, failSave] = useSaveIndicator();
   const pendingRef = useRef<SpaceEntry>(EMPTY);
 
   useEffect(() => {
@@ -53,7 +53,7 @@ export default function SpaceSection({ userId }: SpaceSectionProps) {
 
   const persist = async (e: SpaceEntry) => {
     startSave();
-    await supabase.from('camryn_space').upsert(
+    const { error } = await supabase.from('camryn_space').upsert(
       {
         user_id: userId,
         entry_date: today,
@@ -65,6 +65,11 @@ export default function SpaceSection({ userId }: SpaceSectionProps) {
       },
       { onConflict: 'user_id,entry_date' }
     );
+    if (error) {
+      console.error('space entry save failed:', error);
+      failSave();
+      return;
+    }
     doneSave();
   };
 

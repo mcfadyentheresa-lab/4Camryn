@@ -1,12 +1,14 @@
-import { createClient, RealtimeChannel } from '@supabase/supabase-js';
+import type { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
+import { supabase as typedSupabase } from '../lib/supabase';
 
-// Untyped client intentionally — daily_items is a shared FrontDoor table
-// not in database.types.ts. Uses same credentials as the main client so the Supabase
-// SDK shares the persisted auth session from localStorage.
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL as string,
-  import.meta.env.VITE_SUPABASE_ANON_KEY as string,
-);
+// daily_items is a shared FrontDoor table not in database.types.ts, so this
+// stays untyped rather than typing it against the app's own Database
+// interface. Previously this created its own createClient() instance,
+// which produced a second GoTrueClient in the same browser context
+// (Supabase's own warning: "may produce undefined behavior when used
+// concurrently under the same storage key"). Reusing the one client the
+// rest of the app already has avoids that entirely.
+const supabase = typedSupabase as unknown as SupabaseClient;
 
 function localToday(): string {
   const d = new Date();
@@ -34,11 +36,15 @@ export async function upsertChatTask(userId: string, title: string, energy: stri
     const sourceId = `camryn-chat-${userId.slice(0, 8)}-${today}`;
     const { data: existing } = await supabase.from('daily_items').select('id, completion_state').eq('source_id', sourceId).maybeSingle();
     if (existing) {
-      if (existing.completion_state === 'pending') { await supabase.from('daily_items').update({ title, updated_at: new Date().toISOString() }).eq('id', existing.id); }
+      if (existing.completion_state === 'pending') {
+        const { error } = await supabase.from('daily_items').update({ title, updated_at: new Date().toISOString() }).eq('id', existing.id);
+        if (error) console.error('[camrynSync] upsertChatTask update failed:', error);
+      }
       return;
     }
     const energyFit = energy === 'High' ? 'high' : energy === 'Low' ? 'low' : 'medium';
-    await supabase.from('daily_items').insert({ source_app: 'camryn', source_id: sourceId, title, domain: 'wellness', priority: 2, energy_fit: energyFit, estimated_minutes: 20, due_today: true, scheduled_date: today, completion_state: 'pending', is_hero: false, display_order: 45, unlock_order: 0, user_id: userId });
+    const { error } = await supabase.from('daily_items').insert({ source_app: 'camryn', source_id: sourceId, title, domain: 'wellness', priority: 2, energy_fit: energyFit, estimated_minutes: 20, due_today: true, scheduled_date: today, completion_state: 'pending', is_hero: false, display_order: 45, unlock_order: 0, user_id: userId });
+    if (error) console.error('[camrynSync] upsertChatTask insert failed:', error);
   } catch (err) {
     console.error('[camrynSync] upsertChatTask failed:', err);
   }
@@ -55,14 +61,16 @@ async function upsertDailyItems(taskShortTitles: string[], energy: string, userI
 
     if (existing) {
       if (isChecked && existing.completion_state === 'pending') {
-        await supabase.from('daily_items').update({ completion_state: 'done', updated_at: new Date().toISOString() }).eq('id', existing.id);
+        const { error } = await supabase.from('daily_items').update({ completion_state: 'done', updated_at: new Date().toISOString() }).eq('id', existing.id);
+        if (error) console.error('[camrynSync] mark-done update failed:', error);
       } else if (!isChecked && existing.completion_state === 'pending') {
-        await supabase.from('daily_items').update({ title, updated_at: new Date().toISOString() }).eq('id', existing.id);
+        const { error } = await supabase.from('daily_items').update({ title, updated_at: new Date().toISOString() }).eq('id', existing.id);
+        if (error) console.error('[camrynSync] title update failed:', error);
       }
       return;
     }
 
-    await supabase.from('daily_items').insert({
+    const { error } = await supabase.from('daily_items').insert({
       source_app: 'camryn',
       source_id: sourceId,
       title,
@@ -78,6 +86,7 @@ async function upsertDailyItems(taskShortTitles: string[], energy: string, userI
       unlock_order: idx,
       user_id: userId,
     });
+    if (error) console.error('[camrynSync] daily item insert failed:', error);
   }));
 }
 

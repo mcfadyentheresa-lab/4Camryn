@@ -1,14 +1,30 @@
+// supabase/functions/camryn-vitals/index.ts
+//
+// SECURITY FIX: this function previously had no auth check at all and
+// wrote to whatever user_id was passed in the request body -- anyone who
+// had (or found) a user's UUID could write arbitrary vitals data to their
+// account indefinitely. Brought in line with the same pattern already
+// used by camryn-intake / camryn-apply-pending / camryn-status: a shared
+// secret header, plus the same hardcoded CAMRYN_TARGET_USER_ID every
+// other bridge function in this project uses (multi-user identity mapping
+// is deliberately deferred project-wide, per those functions' own
+// comments). The request no longer needs to send user_id at all -- it's
+// resolved server-side, so a caller with the secret can only ever write
+// to the one real account, never target another user's data.
+
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+
+const VITALS_SECRET = Deno.env.get("CAMRYN_VITALS_SECRET");
+const TARGET_USER_ID = Deno.env.get("CAMRYN_TARGET_USER_ID");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey, x-camryn-vitals-secret",
 };
 
 interface VitalsPayload {
-  user_id: string;
   date?: string;
   resting_hr?: number | null;
   hrv_ms?: number | null;
@@ -29,27 +45,34 @@ Deno.serve(async (req: Request) => {
     });
   }
 
+  const providedSecret = req.headers.get("x-camryn-vitals-secret");
+  if (!VITALS_SECRET || providedSecret !== VITALS_SECRET) {
+    return new Response(JSON.stringify({ error: "unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  if (!TARGET_USER_ID) {
+    return new Response(JSON.stringify({ error: "CAMRYN_TARGET_USER_ID not configured" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const db = createClient(supabaseUrl, serviceKey);
 
     const body: VitalsPayload = await req.json();
-
-    if (!body.user_id) {
-      return new Response(JSON.stringify({ error: "user_id is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const entryDate = body.date ?? new Date().toISOString().split("T")[0];
 
     const { error: upsertError } = await db
       .from("camryn_vitals")
       .upsert(
         {
-          user_id: body.user_id,
+          user_id: TARGET_USER_ID,
           entry_date: entryDate,
           resting_hr: body.resting_hr ?? null,
           hrv_ms: body.hrv_ms ?? null,
@@ -67,7 +90,7 @@ Deno.serve(async (req: Request) => {
     const { count } = await db
       .from("camryn_vitals")
       .select("*", { count: "exact", head: true })
-      .eq("user_id", body.user_id);
+      .eq("user_id", TARGET_USER_ID);
 
     const daysLogged = count ?? 0;
     let calibrationStage: string;

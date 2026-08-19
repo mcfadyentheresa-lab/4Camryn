@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const VITALS_ENDPOINT = `${SUPABASE_URL}/functions/v1/camryn-vitals`;
+const VITALS_SECRET = import.meta.env.VITE_CAMRYN_VITALS_SECRET as string | undefined;
 
 interface VitalsRow {
   entry_date: string;
@@ -61,8 +62,8 @@ const SHORTCUT_STEPS = [
   'Add another "Get Health Samples" action. Set type to "Resting Heart Rate". Date range "Yesterday". Get average.',
   'Add another "Get Health Samples" action. Set type to "Sleep Analysis". Date range "Last night". Get total.',
   'Add another "Get Health Samples" action. Set type to "Step Count". Date range "Yesterday". Get sum.',
-  'Add a "Dictionary" action. Set keys: user_id (your Camryn user ID), date (use "Formatted Date" with format YYYY-MM-dd, date "Yesterday"), hrv_ms (from step 3), resting_hr (from step 4), sleep_hours (from step 5 ÷ 3600), steps (from step 6).',
-  'Add a "Get Contents of URL" action. Set URL to your Camryn vitals endpoint. Method POST. Request Body: JSON. Pass the Dictionary from step 7.',
+  'Add a "Dictionary" action. Set keys: date (use "Formatted Date" with format YYYY-MM-dd, date "Yesterday"), hrv_ms (from step 3), resting_hr (from step 4), sleep_hours (from step 5 ÷ 3600), steps (from step 6).',
+  'Add a "Get Contents of URL" action. Set URL to your Camryn vitals endpoint. Method POST. Request Body: JSON. Pass the Dictionary from step 7. Under Headers, add one: key "x-camryn-vitals-secret", value is your vitals secret below.',
   'Name the shortcut "Camryn Morning Sync".',
   'Tap the shortcut info icon (i), enable "Add to Home Screen" and set it to run automatically at 7:00 AM using Automation.',
 ];
@@ -78,9 +79,9 @@ export default function VitalsCard({ userId }: VitalsCardProps) {
   const [hrv7avg, setHrv7avg] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [setupOpen, setSetupOpen] = useState(false);
-  const [copied, setCopied] = useState<'uid' | 'url' | null>(null);
+  const [copied, setCopied] = useState<'secret' | 'url' | null>(null);
 
-  const copyToClipboard = (text: string, key: 'uid' | 'url') => {
+  const copyToClipboard = (text: string, key: 'secret' | 'url') => {
     navigator.clipboard.writeText(text).then(() => {
       setCopied(key);
       setTimeout(() => setCopied(null), 1800);
@@ -189,18 +190,6 @@ export default function VitalsCard({ userId }: VitalsCardProps) {
               </ol>
               <div className="vitals-copy-block">
                 <div className="vitals-copy-row">
-                  <span className="vitals-copy-label">Your user ID</span>
-                  <div className="vitals-copy-value-wrap">
-                    <code className="vitals-copy-value">{userId}</code>
-                    <button
-                      className="vitals-copy-btn"
-                      onClick={() => copyToClipboard(userId, 'uid')}
-                    >
-                      {copied === 'uid' ? 'Copied' : 'Copy'}
-                    </button>
-                  </div>
-                </div>
-                <div className="vitals-copy-row">
                   <span className="vitals-copy-label">Vitals endpoint URL</span>
                   <div className="vitals-copy-value-wrap">
                     <code className="vitals-copy-value">{VITALS_ENDPOINT}</code>
@@ -212,8 +201,26 @@ export default function VitalsCard({ userId }: VitalsCardProps) {
                     </button>
                   </div>
                 </div>
+                {VITALS_SECRET ? (
+                  <div className="vitals-copy-row">
+                    <span className="vitals-copy-label">Vitals secret (header value)</span>
+                    <div className="vitals-copy-value-wrap">
+                      <code className="vitals-copy-value">{VITALS_SECRET}</code>
+                      <button
+                        className="vitals-copy-btn"
+                        onClick={() => copyToClipboard(VITALS_SECRET, 'secret')}
+                      >
+                        {copied === 'secret' ? 'Copied' : 'Copy'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="vitals-shortcut-note">
+                    Vitals secret isn't configured in this environment yet — the Shortcut won't be able to sync until it is.
+                  </p>
+                )}
                 <p className="vitals-shortcut-note">
-                  Paste these into your Shortcut at step 7 (user_id) and step 8 (URL). Keep them private — they give write access to your data.
+                  Paste the URL into step 8, and add the secret as the "x-camryn-vitals-secret" header value in that same step. Keep the secret private — it's what gives the Shortcut write access to your data.
                 </p>
               </div>
             </div>

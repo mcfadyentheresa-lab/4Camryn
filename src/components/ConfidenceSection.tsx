@@ -30,6 +30,7 @@ function LikesCard({ userId }: { userId: string }) {
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState({ title: '', category: 'Other' as LikeCategory, note: '', url: '' });
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -44,19 +45,30 @@ function LikesCard({ userId }: { userId: string }) {
   const handleAdd = async () => {
     if (!draft.title.trim()) return;
     setSaving(true);
-    const { data } = await supabase
+    setSaveError(null);
+    const { data, error } = await supabase
       .from('camryn_likes')
       .insert({ user_id: userId, title: draft.title.trim(), category: draft.category, note: draft.note.trim(), url: draft.url.trim() })
       .select()
       .maybeSingle();
+    setSaving(false);
+    if (error) {
+      console.error('like save failed:', error);
+      setSaveError('Could not save — try again.');
+      return;
+    }
     if (data) setLikes((prev) => [data as Like, ...prev]);
     setDraft({ title: '', category: 'Other', note: '', url: '' });
     setAdding(false);
-    setSaving(false);
   };
 
   const handleDelete = async (id: string) => {
-    await supabase.from('camryn_likes').delete().eq('id', id);
+    const { error } = await supabase.from('camryn_likes').delete().eq('id', id);
+    if (error) {
+      console.error('like delete failed:', error);
+      setSaveError('Could not remove that — try again.');
+      return;
+    }
     setLikes((prev) => prev.filter((l) => l.id !== id));
   };
 
@@ -148,11 +160,12 @@ function LikesCard({ userId }: { userId: string }) {
                 value={draft.url}
                 onChange={(e) => setDraft((d) => ({ ...d, url: e.target.value }))}
               />
+              {saveError && <p style={{ color: 'var(--error, #d64545)', fontSize: '0.82rem', margin: '4px 0 0' }}>{saveError}</p>}
               <div className="conf-like-form-actions">
                 <button className="conf-like-save-btn" onClick={handleAdd} disabled={!draft.title.trim() || saving}>
                   {saving ? 'Saving...' : 'Save'}
                 </button>
-                <button className="conf-like-cancel-btn" onClick={() => { setAdding(false); setDraft({ title: '', category: 'Other', note: '', url: '' }); }}>
+                <button className="conf-like-cancel-btn" onClick={() => { setAdding(false); setDraft({ title: '', category: 'Other', note: '', url: '' }); setSaveError(null); }}>
                   Cancel
                 </button>
               </div>
@@ -280,12 +293,12 @@ export default function ConfidenceSection({ userId }: ConfidenceSectionProps) {
   const [confNote, setConfNote] = useState('');
   const [rebrandNote, setRebrandNote] = useState('');
   const dailyPending = useRef({ confidence_note: '', rebrand_note: '' });
-  const [dailySave, startDailySave, doneDailySave] = useSaveIndicator();
+  const [dailySave, startDailySave, doneDailySave, failDailySave] = useSaveIndicator();
 
   // Profile state
   const [profile, setProfile] = useState<Profile>(EMPTY_PROFILE);
   const profilePending = useRef<Profile>(EMPTY_PROFILE);
-  const [profileSave, startProfileSave, doneProfileSave] = useSaveIndicator();
+  const [profileSave, startProfileSave, doneProfileSave, failProfileSave] = useSaveIndicator();
   const [justSavedId, setJustSavedId] = useState<ProfileKey | null>(null);
 
   // Metadata
@@ -294,7 +307,7 @@ export default function ConfidenceSection({ userId }: ConfidenceSectionProps) {
   const [recentEntries, setRecentEntries] = useState<DailyEntry[]>([]);
   const [rebrandPrompt, setRebrandPrompt] = useState('');
   const rebrandPendingRef = useRef('');
-  const [rebrandSave, startRebrandSave, doneRebrandSave] = useSaveIndicator();
+  const [rebrandSave, startRebrandSave, doneRebrandSave, failRebrandSave] = useSaveIndicator();
 
   // ── Load ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -369,7 +382,7 @@ export default function ConfidenceSection({ userId }: ConfidenceSectionProps) {
   // ── Daily save ────────────────────────────────────────────────────────
   const saveDaily = async () => {
     startDailySave();
-    await supabase.from('camryn_confidence').upsert(
+    const { error } = await supabase.from('camryn_confidence').upsert(
       {
         user_id: userId,
         entry_date: today,
@@ -379,6 +392,11 @@ export default function ConfidenceSection({ userId }: ConfidenceSectionProps) {
       },
       { onConflict: 'user_id,entry_date' }
     );
+    if (error) {
+      console.error('confidence daily save failed:', error);
+      failDailySave();
+      return;
+    }
     doneDailySave();
     if (dailyPending.current.confidence_note.trim()) {
       setConfDays(d => Math.max(d, 1));
@@ -388,7 +406,7 @@ export default function ConfidenceSection({ userId }: ConfidenceSectionProps) {
   // ── Profile save ──────────────────────────────────────────────────────
   const saveProfile = async (savedId?: ProfileKey) => {
     startProfileSave();
-    await supabase.from('camryn_confidence_profile').upsert(
+    const { error } = await supabase.from('camryn_confidence_profile').upsert(
       {
         user_id: userId,
         ...profilePending.current,
@@ -396,6 +414,11 @@ export default function ConfidenceSection({ userId }: ConfidenceSectionProps) {
       },
       { onConflict: 'user_id' }
     );
+    if (error) {
+      console.error('confidence profile save failed:', error);
+      failProfileSave();
+      return;
+    }
     doneProfileSave();
     if (savedId) {
       setJustSavedId(savedId);
@@ -406,7 +429,7 @@ export default function ConfidenceSection({ userId }: ConfidenceSectionProps) {
   // ── Rebrand prompt save ───────────────────────────────────────────────
   const saveRebrandPrompt = async () => {
     startRebrandSave();
-    await supabase.from('camryn_confidence_profile').upsert(
+    const { error } = await supabase.from('camryn_confidence_profile').upsert(
       {
         user_id: userId,
         rebrand_prompt: rebrandPendingRef.current,
@@ -414,6 +437,11 @@ export default function ConfidenceSection({ userId }: ConfidenceSectionProps) {
       },
       { onConflict: 'user_id' }
     );
+    if (error) {
+      console.error('rebrand prompt save failed:', error);
+      failRebrandSave();
+      return;
+    }
     doneRebrandSave();
   };
 

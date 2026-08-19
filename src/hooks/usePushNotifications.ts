@@ -62,7 +62,13 @@ export function usePushNotifications(userId: string | null) {
     const reg = await navigator.serviceWorker.ready;
     const sub = await reg.pushManager.getSubscription();
     if (sub) {
-      await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
+      const { error } = await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
+      if (error) {
+        // Still unsubscribe the browser's push registration -- that's the
+        // user-facing goal (stop notifications). The orphaned DB row just
+        // means a future push attempt to this endpoint will fail server-side.
+        console.error('push subscription row delete failed:', error);
+      }
       await sub.unsubscribe();
     }
     setState('unknown');

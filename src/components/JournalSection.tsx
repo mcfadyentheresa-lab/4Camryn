@@ -315,14 +315,16 @@ async function applyLogActions(userId: string, actions: LogAction[]): Promise<vo
           .eq('entry_date', today)
           .maybeSingle();
         if (existing) {
-          await supabase
+          const { error } = await supabase
             .from('camryn_food_daily')
             .update({ water_cups: (existing.water_cups ?? 0) + cups })
             .eq('id', existing.id);
+          if (error) console.error('[journal] auto-log water update failed:', error);
         } else {
-          await supabase
+          const { error } = await supabase
             .from('camryn_food_daily')
             .insert([{ user_id: userId, entry_date: today, water_cups: cups }]);
+          if (error) console.error('[journal] auto-log water insert failed:', error);
         }
       } else if (action.type === 'food') {
         const desc = (action.description ?? '').trim().toLowerCase();
@@ -334,7 +336,7 @@ async function applyLogActions(userId: string, actions: LogAction[]): Promise<vo
           .eq('entry_date', today)
           .ilike('description', desc);
         if ((count ?? 0) > 0) continue;
-        await supabase.from('camryn_food_entries').insert([{
+        const { error } = await supabase.from('camryn_food_entries').insert([{
           user_id: userId,
           entry_date: today,
           meal_type: action.meal_type ?? 'snack',
@@ -345,19 +347,24 @@ async function applyLogActions(userId: string, actions: LogAction[]): Promise<vo
           fat_g: action.fat_g ?? null,
           fiber_g: action.fiber_g ?? null,
         }]);
+        if (error) console.error('[journal] auto-log food insert failed:', error);
       } else if (action.type === 'exercise') {
         // exercise_note column does not exist in camryn_body; exercise data
         // is tracked in camryn_exercise via BodySection. No-op here.
         void action;
       } else if (action.type === 'mood') {
-        await supabase.from('camryn_confidence').upsert([{
+        const { error } = await supabase.from('camryn_confidence').upsert([{
           user_id: userId,
           entry_date: today,
           confidence_note: action.note ?? '',
         }], { onConflict: 'user_id,entry_date', ignoreDuplicates: false });
+        if (error) console.error('[journal] auto-log mood upsert failed:', error);
       }
-    } catch {
-      // silent — logging failures never block the conversation
+    } catch (err) {
+      // Never blocks the conversation -- this is best-effort background
+      // logging from chat-recognized mentions, not an explicit user save.
+      // Still logged so failures are debuggable instead of invisible.
+      console.error('[journal] auto-log action failed:', err);
     }
   }
 }
@@ -522,13 +529,21 @@ export default function JournalSection({ userId, session, focusInput, displayNam
     const existing = reactions[entryId];
     if (existing === reaction) {
       // Toggle off
-      await supabase.from('camryn_reactions').delete().eq('user_id', userId).eq('journal_entry_id', entryId);
+      const { error } = await supabase.from('camryn_reactions').delete().eq('user_id', userId).eq('journal_entry_id', entryId);
+      if (error) {
+        console.error('reaction remove failed:', error);
+        return;
+      }
       setReactions((prev) => { const next = { ...prev }; delete next[entryId]; return next; });
     } else {
-      await supabase.from('camryn_reactions').upsert(
+      const { error } = await supabase.from('camryn_reactions').upsert(
         { user_id: userId, journal_entry_id: entryId, reaction },
         { onConflict: 'user_id,journal_entry_id' }
       );
+      if (error) {
+        console.error('reaction save failed:', error);
+        return;
+      }
       setReactions((prev) => ({ ...prev, [entryId]: reaction }));
     }
   };

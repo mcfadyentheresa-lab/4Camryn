@@ -5,9 +5,6 @@ import CamrynAvatar from './ui/CamrynAvatar';
 export type AppView = 'today' | 'body' | 'food' | 'confidence' | 'space' | 'journal' | 'loves' | 'profile';
 
 interface HeaderProps {
-  theme?: 'light' | 'dark';
-  onThemeToggle?: () => void;
-  saveStatus?: string;
   syncDot?: 'synced' | 'saving' | 'idle' | 'error';
   view: AppView;
   onViewChange: (view: AppView) => void;

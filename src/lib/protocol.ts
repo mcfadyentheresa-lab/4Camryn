@@ -734,7 +734,7 @@ export const TAG_TO_QUEST: Record<string, string | null> = {
   // Phase 1 — Foundation
   'Foundation · Hydration': 'morning-hydration',
   'Foundation · Gut': 'fiber-goal',
-  'Foundation · Awareness': null,
+  'Foundation · Awareness': 'daily-checkin',
   'Foundation · Sleep': 'fixed-sleep',
   // Phase 2 — Ignition
   'Ignition · Nutrition': 'protein-target',
@@ -769,7 +769,12 @@ export const TAG_TO_QUEST: Record<string, string | null> = {
   // Cross-phase — Support tasks
   'Stress Response · Regulation': null,
   'Low Energy · Priority': null,
-  'Protocol · Self-Assessment': 'daily-checkin',
+  // Was 'daily-checkin' -- but that quest is literally titled "Daily
+  // 5-minute check-in", which is what the Foundation · Awareness task
+  // ("Take your 5-minute check-in") describes, not this one. Wiring it here
+  // caused completing *any* task to also mark this task's box, and vice
+  // versa. Matches its sibling support-task tags (also null) now.
+  'Protocol · Self-Assessment': null,
 };
 
 if (import.meta.env.DEV) {

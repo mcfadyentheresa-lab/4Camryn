@@ -92,7 +92,14 @@ export default function LovesSection({ userId }: { userId: string }) {
   const handleDelete = async (id: string) => {
     const item = items.find((i) => i.id === id);
     setItems((prev) => prev.filter((i) => i.id !== id));
-    await supabase.from('camryn_likes').delete().eq('id', id);
+    const { error } = await supabase.from('camryn_likes').delete().eq('id', id);
+    if (error) {
+      console.error('like delete failed:', error);
+      // Removed it from view optimistically -- put it back since the
+      // delete never actually landed, so the UI doesn't disagree with the DB.
+      if (item) setItems((prev) => [item, ...prev]);
+      return;
+    }
     // Clean up storage image if there is one
     if (item?.image_url) {
       const path = item.image_url.split(`/loves-images/`)[1];
