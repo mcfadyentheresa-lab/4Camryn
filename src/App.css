@@ -4200,35 +4200,6 @@ button.camryn-orb:focus-visible .camryn-orb-sphere {
 }
 
 /* ── Body section cycle guidance ── */
-.body-guidance-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  width: 100%;
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  text-align: left;
-}
-
-.body-guidance-preview {
-  font-size: 0.78rem;
-  color: var(--muted);
-  margin: 4px 0 0;
-}
-
-.body-guidance-chevron {
-  flex-shrink: 0;
-  color: var(--muted);
-  transition: transform 0.2s ease;
-}
-
-.body-guidance-chevron.open {
-  transform: rotate(180deg);
-}
-
 .body-guidance-body {
   margin-top: 16px;
   display: flex;

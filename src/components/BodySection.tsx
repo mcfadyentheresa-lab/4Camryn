@@ -128,9 +128,6 @@ export default function BodySection({
   const [exerciseOpen, setExerciseOpen] = useState(false);
   const [exerciseSave, startExSave, doneExSave, failExSave] = useSaveIndicator();
 
-  // Cycle guidance state
-  const [guidanceOpen, setGuidanceOpen] = useState(false);
-
   const cyclePhaseInfo = cyclePhaseFromName(cyclePhase);
   const guidance = getCycleGuidance(cyclePhase);
 
@@ -337,51 +334,34 @@ export default function BodySection({
 
       {/* ── Cycle guidance card ── */}
       <div className="body-card" style={{ marginBottom: '20px' }}>
-        <button
-          className="body-guidance-toggle"
-          onClick={() => setGuidanceOpen((v) => !v)}
-          aria-expanded={guidanceOpen}
-        >
-          <div>
-            <div className="body-card-header" style={{ marginBottom: 0 }}>
-              <h3 className="body-card-title">What this phase means for you</h3>
-              <span className="body-pill sage">{cyclePhase}</span>
-            </div>
-            <p className="body-guidance-preview">Food · Movement · Energy — tap to expand</p>
-          </div>
-          <svg
-            className={`body-guidance-chevron ${guidanceOpen ? 'open' : ''}`}
-            width="14" height="14" viewBox="0 0 14 14" fill="none"
-          >
-            <path d="M3 5L7 9L11 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
+        <div className="body-card-header">
+          <h3 className="body-card-title">What this phase means for you</h3>
+          <span className="body-pill sage">{cyclePhase}</span>
+        </div>
 
-        {guidanceOpen && (
-          <div className="body-guidance-body">
-            <div className="body-guidance-row">
-              <span className="body-guidance-icon">🥗</span>
-              <div>
-                <div className="body-guidance-row-label">Food</div>
-                <p className="body-guidance-text">{guidance.food}</p>
-              </div>
-            </div>
-            <div className="body-guidance-row">
-              <span className="body-guidance-icon">🏋️</span>
-              <div>
-                <div className="body-guidance-row-label">Movement</div>
-                <p className="body-guidance-text">{guidance.movement}</p>
-              </div>
-            </div>
-            <div className="body-guidance-row">
-              <span className="body-guidance-icon">⚡</span>
-              <div>
-                <div className="body-guidance-row-label">Energy</div>
-                <p className="body-guidance-text">{guidance.energy}</p>
-              </div>
+        <div className="body-guidance-body">
+          <div className="body-guidance-row">
+            <span className="body-guidance-icon">🥗</span>
+            <div>
+              <div className="body-guidance-row-label">Food</div>
+              <p className="body-guidance-text">{guidance.food}</p>
             </div>
           </div>
-        )}
+          <div className="body-guidance-row">
+            <span className="body-guidance-icon">🏋️</span>
+            <div>
+              <div className="body-guidance-row-label">Movement</div>
+              <p className="body-guidance-text">{guidance.movement}</p>
+            </div>
+          </div>
+          <div className="body-guidance-row">
+            <span className="body-guidance-icon">⚡</span>
+            <div>
+              <div className="body-guidance-row-label">Energy</div>
+              <p className="body-guidance-text">{guidance.energy}</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="body-grid">
