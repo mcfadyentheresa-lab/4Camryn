@@ -276,6 +276,16 @@ export default function BodySection({
           <div className="cycle-phase-name">{cyclePhaseInfo.name}</div>
           <div className="cycle-phase-desc">{cyclePhaseInfo.desc}</div>
 
+          {lastPeriodDate !== today && (
+            <button
+              type="button"
+              className="cycle-period-today-btn"
+              onClick={() => onCycleDateChange?.(today)}
+            >
+              🩸 Period started today
+            </button>
+          )}
+
           {showDateInput ? (
             <>
               <div className="cycle-input-label">First day of last period</div>

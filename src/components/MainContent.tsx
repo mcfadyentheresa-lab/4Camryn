@@ -17,6 +17,7 @@ import { getDailyCoachingSentence, getCompletionNote, getPhasePosition } from '.
 import MasteryCard from './MasteryCard';
 import CycleActionTile from './CycleActionTile';
 import WeeklyFocusCard from './WeeklyFocusCard';
+import PeriodToggle from './PeriodToggle';
 
 interface Session {
   current_phase: number;
@@ -42,6 +43,7 @@ interface MainContentProps {
   dailyStreak?: number;
   daysSinceLastSave?: number | null;
   frontDoorCompletions?: number[];
+  onPeriodStart?: (dateStr: string) => void;
 }
 
 function questIdFromTag(tag: string, phase: number): string | null {
@@ -84,6 +86,7 @@ export default function MainContent({
   dailyStreak = 0,
   daysSinceLastSave = null,
   frontDoorCompletions = [],
+  onPeriodStart,
 }: MainContentProps) {
   const [checkedItems, setCheckedItems] = useState<boolean[]>(() => [false, false, false]);
   const [expanded, setExpanded] = useState<number | null>(null);
@@ -418,14 +421,17 @@ export default function MainContent({
         );
       })()}
 
-      {/* ── Streak banner — shown when streak ≥ 2 and no gap ── */}
-      {dailyStreak >= 2 && (daysSinceLastSave === null || daysSinceLastSave <= 1) && (
-        <div className="streak-banner">
-          <span className="streak-fire">●</span>
-          <span className="streak-count">{dailyStreak} day streak</span>
-          <span className="streak-label">Keep it going</span>
-        </div>
-      )}
+      {/* ── Period toggle + streak banner (streak shown when ≥ 2 and no gap) ── */}
+      <div className="today-status-row">
+        <PeriodToggle userId={userId} onPeriodStart={(d) => onPeriodStart?.(d)} />
+        {dailyStreak >= 2 && (daysSinceLastSave === null || daysSinceLastSave <= 1) && (
+          <div className="streak-banner">
+            <span className="streak-fire">●</span>
+            <span className="streak-count">{dailyStreak} day streak</span>
+            <span className="streak-label">Keep it going</span>
+          </div>
+        )}
+      </div>
 
       {/* ── Phase position strip + Camryn daily sentence ── */}
       {(() => {
@@ -605,9 +611,10 @@ export default function MainContent({
           className="mastery-nudge"
           onClick={() => { setMasteryOpen(true); setTimeout(() => document.getElementById(`quest-row-${nearestQuest.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100); }}
         >
+          <div className="mastery-nudge-label">Next unlock</div>
           <div className="mastery-nudge-text">
             <span className="mastery-nudge-title">{nearestQuest.title}</span>
-            <span className="mastery-nudge-days">{nearestQuestDaysLeft} day{nearestQuestDaysLeft !== 1 ? 's' : ''} to unlock</span>
+            <span className="mastery-nudge-days">{nearestQuestDaysLeft} day{nearestQuestDaysLeft !== 1 ? 's' : ''} to go</span>
           </div>
           <div className="mastery-nudge-bar-wrap">
             <div className="mastery-nudge-bar" style={{ width: `${nearestQuestPct}%` }} />

@@ -694,6 +694,33 @@ export interface Database {
         }
         Relationships: []
       }
+
+      // camryn_period_log: created via migration create_camryn_period_log.
+      // One row per period; end_date is null while the period is ongoing.
+      camryn_period_log: {
+        Row: {
+          id: string
+          user_id: string
+          start_date: string
+          end_date: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          start_date: string
+          end_date?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          start_date?: string
+          end_date?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: { [_ in never]: never }
     Functions: { [_ in never]: never }

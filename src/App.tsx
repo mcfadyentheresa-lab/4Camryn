@@ -704,6 +704,7 @@ function App() {
               dailyStreak={dailyStreak}
               daysSinceLastSave={daysSinceLastSave}
               frontDoorCompletions={frontDoorCompletions}
+              onPeriodStart={handleCycleDateChange}
             />
           )}
           {view === 'body' && (

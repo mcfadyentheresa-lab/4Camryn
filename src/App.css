@@ -365,6 +365,38 @@
 }
 
 /* ── Streak banner ───────────────────────────────── */
+.today-status-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.today-status-row .streak-banner {
+  flex: 1;
+}
+
+.period-toggle {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  border-radius: 50%;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.period-toggle:hover { border-color: #c2405e; color: #c2405e; }
+
+.period-toggle.active {
+  background: #fce4ec;
+  border-color: #c2405e;
+  color: #c2405e;
+}
+
 .streak-banner {
   display: flex;
   align-items: center;
@@ -467,6 +499,14 @@
 
 .mastery-nudge:hover {
   background: var(--sand);
+}
+
+.mastery-nudge-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 .mastery-nudge-text {
@@ -1623,6 +1663,24 @@
   font-weight: 600;
   border-color: transparent;
 }
+
+.cycle-period-today-btn {
+  display: block;
+  width: 100%;
+  margin: 4px 0 10px;
+  padding: 9px 12px;
+  border-radius: var(--r-sm);
+  border: none;
+  background: var(--camryn-cycle-mint-deep);
+  color: #fff;
+  font-size: 0.83rem;
+  font-weight: 700;
+  text-align: center;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+
+.cycle-period-today-btn:hover { filter: brightness(1.08); }
 
 .cycle-learn-btn {
   margin-top: 11px;
