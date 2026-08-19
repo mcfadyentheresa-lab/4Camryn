@@ -4,6 +4,13 @@ import CamrynAvatar from './ui/CamrynAvatar';
 
 export type AppView = 'today' | 'body' | 'food' | 'confidence' | 'space' | 'journal' | 'inspiration' | 'profile';
 
+// Grouped by the cadence each section claims for itself -- Journal frames
+// itself as a daily wind-down habit, Today is the daily anchor. Everything
+// else explicitly says "no notification, visit whenever it feels right"
+// (Confidence) or "no alarm, no reminder" (Space) in its own copy.
+const DAILY_VIEWS: AppView[] = ['today', 'journal'];
+const WHENEVER_VIEWS: AppView[] = ['profile', 'body', 'food', 'confidence', 'space', 'inspiration'];
+
 interface HeaderProps {
   syncDot?: 'synced' | 'saving' | 'idle' | 'error';
   view: AppView;
@@ -55,7 +62,19 @@ export default function Header({ syncDot = 'idle', view, onViewChange, currentPh
                 <>
                   <div className="me-menu-backdrop" onClick={() => setShowMe(false)} />
                   <div className="me-menu">
-                    {(['today', 'profile', 'journal', 'body', 'food', 'confidence', 'space', 'inspiration'] as AppView[]).map((v) => (
+                    <div className="me-menu-label">Daily</div>
+                    {DAILY_VIEWS.map((v) => (
+                      <button
+                        key={v}
+                        className={`me-menu-item ${view === v ? 'active' : ''}`}
+                        onClick={() => { onViewChange(v); setShowMe(false); }}
+                      >
+                        {v.charAt(0).toUpperCase() + v.slice(1)}
+                      </button>
+                    ))}
+                    <div className="me-menu-divider" />
+                    <div className="me-menu-label">Whenever</div>
+                    {WHENEVER_VIEWS.map((v) => (
                       <button
                         key={v}
                         className={`me-menu-item ${view === v ? 'active' : ''}`}

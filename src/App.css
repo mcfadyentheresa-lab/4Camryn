@@ -7782,6 +7782,15 @@ button.camryn-orb:focus-visible .camryn-orb-sphere {
   margin: 4px 0;
 }
 
+.me-menu-label {
+  padding: 8px 16px 4px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
 /* ── Day counter + sync dot ─────────────────────── */
 .header-day-count {
   display: flex;
