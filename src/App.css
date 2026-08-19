@@ -139,6 +139,26 @@
   border-color: var(--accent-muted);
 }
 
+.theme-toggle-btn {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  background: transparent;
+  border-radius: 50%;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.theme-toggle-btn:hover {
+  background: var(--soft);
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
 
 .save-status {
   font-size: 0.8rem;
@@ -7630,9 +7650,14 @@ button.camryn-orb:focus-visible .camryn-orb-sphere {
 /*
   Applied via data-night="true" on the root div.
   Overrides colour tokens for the full app with a warmer,
-  deeper palette. Works on top of both light and dark themes.
+  deeper palette. Works on top of both light and dark themes --
+  the div[...] form (rather than bare [data-night='true']) is
+  deliberate: it outranks [data-theme='dark'] on specificity alone,
+  so night mode wins regardless of CSS source order between this
+  file and index.css when a user has manually picked dark mode
+  during automatic night hours.
 */
-[data-night='true'] {
+div[data-night='true'] {
   --bg:           #0b1218;
   --paper:        #111a20;
   --ink:          #d8eaf0;

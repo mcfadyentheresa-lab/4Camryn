@@ -18,9 +18,11 @@ interface HeaderProps {
   currentPhase?: number;
   displayName?: string | null;
   dayCount?: number;
+  theme?: 'light' | 'dark';
+  onThemeToggle?: () => void;
 }
 
-export default function Header({ syncDot = 'idle', view, onViewChange, currentPhase, displayName, dayCount }: HeaderProps) {
+export default function Header({ syncDot = 'idle', view, onViewChange, currentPhase, displayName, dayCount, theme = 'light', onThemeToggle }: HeaderProps) {
   const [showProtocol, setShowProtocol] = useState(false);
   const [showMe, setShowMe] = useState(false);
 
@@ -87,6 +89,25 @@ export default function Header({ syncDot = 'idle', view, onViewChange, currentPh
                 </>
               )}
             </div>
+
+            <button
+              type="button"
+              className="theme-toggle-btn"
+              onClick={onThemeToggle}
+              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {theme === 'dark' ? (
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M14 9.3A6 6 0 0 1 6.7 2 6 6 0 1 0 14 9.3Z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <circle cx="8" cy="8" r="3.2" stroke="currentColor" strokeWidth="1.4" />
+                  <path d="M8 1.3v1.6M8 13.1v1.6M2.6 8H1M15 8h-1.6M3.6 3.6l1.1 1.1M11.3 11.3l1.1 1.1M12.4 3.6l-1.1 1.1M4.7 11.3l-1.1 1.1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                </svg>
+              )}
+            </button>
           </div>
         </div>
       </nav>

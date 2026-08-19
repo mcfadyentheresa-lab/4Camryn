@@ -110,10 +110,17 @@ function App() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
-  // No UI currently changes this -- the toggle was wired to Header but
-  // Header never rendered it. Left as a plain value rather than state
-  // until the aesthetic pass adds a real theme switcher.
-  const theme: 'light' | 'dark' = 'light';
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    const saved = localStorage.getItem('camryn_theme');
+    return saved === 'dark' ? 'dark' : 'light';
+  });
+  const toggleTheme = () => {
+    setTheme((t) => {
+      const next = t === 'light' ? 'dark' : 'light';
+      localStorage.setItem('camryn_theme', next);
+      return next;
+    });
+  };
   const [view, setView] = useState<AppView>(() => {
     const saved = localStorage.getItem('camryn_view');
     const valid: AppView[] = ['today', 'body', 'food', 'confidence', 'space', 'journal', 'inspiration', 'profile'];
@@ -671,6 +678,8 @@ function App() {
           onViewChange={handleViewChange}
           currentPhase={session.current_phase}
           displayName={displayName}
+          theme={theme}
+          onThemeToggle={toggleTheme}
           dayCount={(session.save_count || 0) - (session.phase_start_save_count || 0)}
         />
 
