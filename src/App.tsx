@@ -720,7 +720,7 @@ function App() {
           )}
           {view === 'confidence' && (
             <div className="lane-single">
-              <ConfidenceSection userId={user.id} />
+              <ConfidenceSection userId={user.id} onNavigateTo={(v) => handleViewChange(v as AppView)} />
             </div>
           )}
           {view === 'space' && (
