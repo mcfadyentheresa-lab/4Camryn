@@ -23,7 +23,7 @@ import PhaseGraduationModal from './components/PhaseGraduationModal';
 import ProtocolComplete from './components/ProtocolComplete';
 import NotificationBanner from './components/NotificationBanner';
 import MorningNudgePrompt from './components/MorningNudgePrompt';
-import LovesSection from './components/LovesSection';
+import InspirationSection from './components/InspirationSection';
 import './App.css';
 import { syncToFrontDoor, fetchFrontDoorCompletions, subscribeFrontDoorCompletions } from './services/camrynSyncService';
 import Login from './Login';
@@ -116,7 +116,7 @@ function App() {
   const theme: 'light' | 'dark' = 'light';
   const [view, setView] = useState<AppView>(() => {
     const saved = localStorage.getItem('camryn_view');
-    const valid: AppView[] = ['today', 'body', 'food', 'confidence', 'space', 'journal', 'loves', 'profile'];
+    const valid: AppView[] = ['today', 'body', 'food', 'confidence', 'space', 'journal', 'inspiration', 'profile'];
     return (saved && valid.includes(saved as AppView)) ? (saved as AppView) : 'today';
   });
   const handleViewChange = (v: AppView) => { setView(v); localStorage.setItem('camryn_view', v); };
@@ -761,9 +761,9 @@ function App() {
               />
             </div>
           )}
-          {view === 'loves' && (
+          {view === 'inspiration' && (
             <div className="lane-single">
-              <LovesSection userId={user.id} />
+              <InspirationSection userId={user.id} />
             </div>
           )}
           {view === 'profile' && (

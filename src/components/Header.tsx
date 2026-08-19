@@ -2,7 +2,7 @@ import { useState } from 'react';
 import ProtocolModal from './ProtocolModal';
 import CamrynAvatar from './ui/CamrynAvatar';
 
-export type AppView = 'today' | 'body' | 'food' | 'confidence' | 'space' | 'journal' | 'loves' | 'profile';
+export type AppView = 'today' | 'body' | 'food' | 'confidence' | 'space' | 'journal' | 'inspiration' | 'profile';
 
 interface HeaderProps {
   syncDot?: 'synced' | 'saving' | 'idle' | 'error';
@@ -55,7 +55,7 @@ export default function Header({ syncDot = 'idle', view, onViewChange, currentPh
                 <>
                   <div className="me-menu-backdrop" onClick={() => setShowMe(false)} />
                   <div className="me-menu">
-                    {(['today', 'profile', 'journal', 'body', 'food', 'confidence', 'space', 'loves'] as AppView[]).map((v) => (
+                    {(['today', 'profile', 'journal', 'body', 'food', 'confidence', 'space', 'inspiration'] as AppView[]).map((v) => (
                       <button
                         key={v}
                         className={`me-menu-item ${view === v ? 'active' : ''}`}

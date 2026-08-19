@@ -29,7 +29,7 @@ function catMeta(id: string) {
 
 const EMPTY_FORM = { title: '', category: 'other', note: '', url: '', image_url: '' };
 
-export default function LovesSection({ userId }: { userId: string }) {
+export default function InspirationSection({ userId }: { userId: string }) {
   const [items, setItems] = useState<LikeItem[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -114,7 +114,7 @@ export default function LovesSection({ userId }: { userId: string }) {
   return (
     <section className="loves-section">
       <div className="loves-head">
-        <div className="card-label" style={{ marginBottom: '2px' }}>Things I Love</div>
+        <div className="card-label" style={{ marginBottom: '2px' }}>Inspiration</div>
         <h2 className="loves-title">What makes life worth living</h2>
         <p className="loves-sub">
           A personal collection of what brings you joy — food, places, ideas, people, habits. Camryn uses this to get to know you and personalise the protocol.
