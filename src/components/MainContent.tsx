@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { PROTOCOL, dailyTasks, dailyLearnForToday, TAG_TO_QUEST } from '../lib/protocol';
+import { PROTOCOL, dailyTasks, dailyLearnForToday, TAG_TO_QUEST, daysCompletedInPhase } from '../lib/protocol';
 import {
   PHASE_QUESTS,
   ensureDailyPick,
@@ -390,7 +390,7 @@ export default function MainContent({
       {/* ── Comeback card — shown when 2+ days without saving ── */}
       {daysSinceLastSave !== null && daysSinceLastSave >= 2 && (() => {
         const phaseName = PROTOCOL.phases.find((p) => p.id === session.current_phase)?.name ?? 'Foundation';
-        const dayN = session.save_count ?? 0;
+        const dayN = daysCompletedInPhase(session.save_count, session.phase_start_save_count);
         let title: string;
         let text: string;
 
@@ -451,7 +451,7 @@ export default function MainContent({
         <WeeklyFocusCard
           phase={session.current_phase}
           cyclePhaseName={session.cycle_phase_name}
-          saveCount={session.save_count}
+          saveCount={daysCompletedInPhase(session.save_count, session.phase_start_save_count)}
         />
 
         {tasks.map((task, idx) => {
@@ -554,7 +554,7 @@ export default function MainContent({
             </div>
             <div className="tasks-complete-body">
               <p className="tasks-complete-headline">
-                Day {session.save_count} done
+                Day {daysCompletedInPhase(session.save_count, session.phase_start_save_count)} done
                 {dailyStreak >= 2
                   ? <span className="tasks-complete-streak"> · {dailyStreak} days in a row</span>
                   : dailyStreak === 1

@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { supabase } from './lib/supabase';
-import { PROTOCOL, dayOfCycleFromDate, phaseFromDay, dailyTasks } from './lib/protocol';
+import { PROTOCOL, dayOfCycleFromDate, phaseFromDay, dailyTasks, daysCompletedInPhase } from './lib/protocol';
 import {
   loadAllMastery,
   saveAllMastery,
@@ -680,7 +680,7 @@ function App() {
           displayName={displayName}
           theme={theme}
           onThemeToggle={toggleTheme}
-          dayCount={(session.save_count || 0) - (session.phase_start_save_count || 0)}
+          dayCount={daysCompletedInPhase(session.save_count, session.phase_start_save_count)}
         />
 
         <PhaseProgressBar

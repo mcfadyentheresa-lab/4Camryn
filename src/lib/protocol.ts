@@ -451,6 +451,15 @@ export function phaseFromDay(day: number) {
   return CYCLE_PHASES[4];
 }
 
+// save_count is a lifetime counter (recomputed from camryn_daily_saves on
+// every save), not phase-relative -- this is the "days completed since this
+// phase/reset began" value that the header day count and the day-complete
+// celebration both need to agree on. Don't read session.save_count directly
+// for a "day N" display; go through this instead.
+export function daysCompletedInPhase(saveCount: number, phaseStartSaveCount: number): number {
+  return (saveCount || 0) - (phaseStartSaveCount || 0);
+}
+
 export function dailyTasks(
   phase: number,
   energy: string,
