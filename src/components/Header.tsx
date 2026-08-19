@@ -35,7 +35,7 @@ export default function Header({ syncDot = 'idle', view, onViewChange, currentPh
 
           <div className="nav-actions">
             {/* Day counter — proof the protocol is accumulating */}
-            {dayCount != null && dayCount > 0 && (
+            {dayCount != null && dayCount >= 0 && (
               <span className="header-day-count">
                 Day {dayCount}
                 <span className={`sync-dot sync-dot--${syncDot}`} title={syncDot === 'synced' ? 'Synced to cloud' : syncDot === 'saving' ? 'Saving...' : syncDot === 'error' ? 'Save failed' : ''} />

@@ -671,7 +671,7 @@ function App() {
           onViewChange={handleViewChange}
           currentPhase={session.current_phase}
           displayName={displayName}
-          dayCount={Math.max((session.save_count || 0) - (session.phase_start_save_count || 0), 1)}
+          dayCount={(session.save_count || 0) - (session.phase_start_save_count || 0)}
         />
 
         <PhaseProgressBar
