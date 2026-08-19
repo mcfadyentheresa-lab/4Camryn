@@ -768,7 +768,7 @@ function App() {
           )}
           {view === 'profile' && (
             <div className="lane-single">
-              <ProfileSection userId={user.id} />
+              <ProfileSection userId={user.id} onReset={() => loadSession(user.id)} />
             </div>
           )}
         </div>

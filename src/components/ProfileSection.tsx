@@ -38,6 +38,7 @@ interface SpaceRow {
 
 interface ProfileSectionProps {
   userId: string;
+  onReset?: () => void | Promise<void>;
 }
 
 function avg(nums: number[]): number | null {
@@ -92,12 +93,46 @@ const LANES = [
 
 type LaneId = typeof LANES[number]['id'];
 
-export default function ProfileSection({ userId }: ProfileSectionProps) {
+export default function ProfileSection({ userId, onReset }: ProfileSectionProps) {
   const [bodyRows, setBodyRows] = useState<BodyRow[]>([]);
   const [confRows, setConfRows] = useState<ConfidenceRow[]>([]);
   const [spaceRows, setSpaceRows] = useState<SpaceRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeLane, setActiveLane] = useState<LaneId>('body');
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+
+  const handleReset = async () => {
+    setResetting(true);
+    setResetError(null);
+    const { error } = await supabase
+      .from('camryn_sessions')
+      .update({
+        current_phase: 1,
+        save_count: 0,
+        phase_start_save_count: 0,
+        protocol_complete: false,
+        protocol_completed_at: null,
+        mastery_data: {
+          phase1: { quests: {}, pickDate: '', pickId: '' },
+          phase2: { quests: {}, pickDate: '', pickId: '' },
+          phase3: { quests: {}, pickDate: '', pickId: '' },
+          phase4: { quests: {}, pickDate: '', pickId: '' },
+          phase5: { quests: {}, pickDate: '', pickId: '' },
+          phase6: { quests: {}, pickDate: '', pickId: '' },
+        },
+      })
+      .eq('user_id', userId);
+    setResetting(false);
+    if (error) {
+      console.error('protocol reset failed:', error);
+      setResetError('Could not reset — try again.');
+      return;
+    }
+    setShowResetConfirm(false);
+    await onReset?.();
+  };
 
   useEffect(() => {
     const cutoff = new Date();
@@ -517,6 +552,41 @@ export default function ProfileSection({ userId }: ProfileSectionProps) {
             </div>
           )}
         </>
+      )}
+
+      <div className="profile-danger-zone">
+        <div className="profile-danger-header">
+          <h3 className="profile-danger-title">Reset protocol</h3>
+          <p className="profile-danger-sub">
+            Start over from Phase 1 — clears your phase, quest progress, and completion status.
+          </p>
+        </div>
+        <button type="button" className="profile-danger-btn" onClick={() => setShowResetConfirm(true)}>
+          Reset protocol
+        </button>
+      </div>
+
+      {showResetConfirm && (
+        <div className="reset-confirm-backdrop" onClick={() => !resetting && setShowResetConfirm(false)}>
+          <div className="reset-confirm-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="reset-confirm-title">Reset your protocol?</h3>
+            <p className="reset-confirm-body">
+              This puts your phase back to 1, clears quest progress, and marks the protocol as not complete. It can&rsquo;t be undone.
+            </p>
+            <p className="reset-confirm-note">
+              Your day-by-day save history and streak stay on record — that part can&rsquo;t be cleared from here.
+            </p>
+            {resetError && <p className="reset-confirm-error">{resetError}</p>}
+            <div className="reset-confirm-actions">
+              <button type="button" className="reset-confirm-cancel" onClick={() => setShowResetConfirm(false)} disabled={resetting}>
+                Cancel
+              </button>
+              <button type="button" className="reset-confirm-danger" onClick={handleReset} disabled={resetting}>
+                {resetting ? 'Resetting…' : 'Yes, reset my protocol'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </section>
   );
