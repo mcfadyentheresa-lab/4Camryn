@@ -63,6 +63,13 @@ async function upsertDailyItems(taskShortTitles: string[], energy: string, userI
       if (isChecked && existing.completion_state === 'pending') {
         const { error } = await supabase.from('daily_items').update({ completion_state: 'done', updated_at: new Date().toISOString() }).eq('id', existing.id);
         if (error) console.error('[camrynSync] mark-done update failed:', error);
+      } else if (!isChecked && existing.completion_state === 'done') {
+        // Previously missing: nothing reverted a 'done' row back to 'pending'
+        // when a task got unchecked, so unchecking in the Camryn UI never
+        // stuck -- Front Door's stale 'done' state would just re-mark it
+        // checked again on the next load.
+        const { error } = await supabase.from('daily_items').update({ completion_state: 'pending', updated_at: new Date().toISOString() }).eq('id', existing.id);
+        if (error) console.error('[camrynSync] mark-pending update failed:', error);
       } else if (!isChecked && existing.completion_state === 'pending') {
         const { error } = await supabase.from('daily_items').update({ title, updated_at: new Date().toISOString() }).eq('id', existing.id);
         if (error) console.error('[camrynSync] title update failed:', error);
