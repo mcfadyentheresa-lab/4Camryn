@@ -207,6 +207,21 @@ function blankMasteryData(quests: Quest[]): MasteryData {
   };
 }
 
+// The one shared "start from zero" shape for all six phases -- previously
+// hand-rolled independently in three different places (App.tsx's initial
+// state, App.tsx's protocol restart, and ProfileSection's reset), which is
+// exactly the kind of drift this function exists to prevent.
+export function blankAllMastery(): AllPhaseMastery {
+  return {
+    phase1: blankMasteryData(PHASE_QUESTS[1]),
+    phase2: blankMasteryData(PHASE_QUESTS[2]),
+    phase3: blankMasteryData(PHASE_QUESTS[3]),
+    phase4: blankMasteryData(PHASE_QUESTS[4]),
+    phase5: blankMasteryData(PHASE_QUESTS[5]),
+    phase6: blankMasteryData(PHASE_QUESTS[6]),
+  };
+}
+
 // ── localStorage (legacy Phase 1 only) ───────────────────────────────────────
 
 const LEGACY_KEY = 'camrynMasteryFoundation';

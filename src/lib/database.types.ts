@@ -97,6 +97,7 @@ export interface Database {
           tasks_complete: number
           tasks_total: number
           is_complete: boolean
+          checked_items: boolean[] | null
           created_at: string | null
           updated_at: string | null
         }
@@ -107,6 +108,7 @@ export interface Database {
           tasks_complete?: number
           tasks_total?: number
           is_complete?: boolean
+          checked_items?: boolean[] | null
           created_at?: string | null
           updated_at?: string | null
         }
@@ -117,6 +119,7 @@ export interface Database {
           tasks_complete?: number
           tasks_total?: number
           is_complete?: boolean
+          checked_items?: boolean[] | null
           created_at?: string | null
           updated_at?: string | null
         }
