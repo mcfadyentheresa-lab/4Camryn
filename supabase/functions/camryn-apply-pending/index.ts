@@ -10,9 +10,17 @@
 // closed to the public internet. Reuses CAMRYN_INTAKE_SECRET (already
 // configured in this project) rather than introducing a second secret.
 //
-// SCOPE (unchanged from the original version): only replicates
-// camryn_daily_saves and camryn_sessions.save_count. camryn_unlocks and
-// daily_items remain deliberately deferred — see the build brief.
+// SCOPE: replicates camryn_daily_saves, camryn_sessions.save_count, and
+// (as of the completion-tracking consolidation) reconciles daily_items so a
+// pending-write-driven completion looks identical to a direct Front Door
+// write once applied -- see reconcileDailyItems below. camryn_unlocks
+// remains deferred. mastery_data is NOT reconciled here: quest-linked task
+// slots would need the same task-generation logic src/lib/protocol.ts
+// implements client-side, and duplicating that in Deno isn't worth it for
+// a single-user app -- if the pending write lands while the Camryn tab is
+// closed, save_count and daily_items update immediately but mastery_data
+// lags until the app is next opened, same as a direct Front Door write to
+// daily_items already behaves today.
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
@@ -27,6 +35,39 @@ function json(body: unknown, status = 200) {
     status,
     headers: { 'Content-Type': 'application/json' },
   });
+}
+
+// Update-only mirror into daily_items, matching the source_id convention
+// and idempotent done/pending transitions the frontend's own
+// upsertDailyItems (camrynSyncService.ts) already uses. Update-only is
+// deliberate: if no daily_items row exists yet for a slot, there's nothing
+// to reconcile -- the frontend creates it correctly next time the app
+// opens. Best-effort: a failure here must never fail the pending write
+// itself, since camryn_daily_saves is the write that actually matters.
+async function reconcileDailyItems(userId: string, targetDate: string, checkedItems: unknown): Promise<void> {
+  if (!Array.isArray(checkedItems)) return;
+
+  await Promise.all(checkedItems.slice(0, 3).map(async (isChecked: unknown, idx: number) => {
+    const sourceId = `camryn-${userId.slice(0, 8)}-${targetDate}-${idx}`;
+    const { data: existing } = await supabase
+      .from('daily_items')
+      .select('id, completion_state')
+      .eq('source_id', sourceId)
+      .maybeSingle();
+    if (!existing) return;
+
+    if (isChecked === true && existing.completion_state === 'pending') {
+      await supabase
+        .from('daily_items')
+        .update({ completion_state: 'done', updated_at: new Date().toISOString() })
+        .eq('id', existing.id);
+    } else if (isChecked === false && existing.completion_state === 'done') {
+      await supabase
+        .from('daily_items')
+        .update({ completion_state: 'pending', updated_at: new Date().toISOString() })
+        .eq('id', existing.id);
+    }
+  }));
 }
 
 Deno.serve(async (req) => {
@@ -63,6 +104,7 @@ Deno.serve(async (req) => {
               tasks_complete: row.tasks_complete,
               tasks_total: row.tasks_total,
               is_complete: row.tasks_complete === row.tasks_total,
+              checked_items: row.checked_items ?? null,
             },
           ],
           { onConflict: 'user_id,save_date' }
@@ -84,6 +126,12 @@ Deno.serve(async (req) => {
           .update({ save_count: realSaveCount })
           .eq('user_id', row.user_id);
         if (sessionWriteError) throw sessionWriteError;
+      }
+
+      try {
+        await reconcileDailyItems(row.user_id, row.target_date, row.checked_items);
+      } catch (reconcileErr) {
+        console.error('daily_items reconcile failed (non-fatal):', reconcileErr);
       }
 
       const { error: applyError } = await supabase
