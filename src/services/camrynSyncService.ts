@@ -43,7 +43,11 @@ export async function upsertChatTask(userId: string, title: string, energy: stri
       return;
     }
     const energyFit = energy === 'High' ? 'high' : energy === 'Low' ? 'low' : 'medium';
-    const { error } = await supabase.from('daily_items').insert({ source_app: 'camryn', source_id: sourceId, title, domain: 'wellness', priority: 2, energy_fit: energyFit, estimated_minutes: 20, due_today: true, scheduled_date: today, completion_state: 'pending', is_hero: false, display_order: 45, unlock_order: 0, user_id: userId });
+    // upsert for the same reason as upsertDailyItems below: the select
+    // above isn't atomic with this write, so two concurrent calls (e.g.
+    // StrictMode's dev double-invoke) can both see "not found" and both
+    // reach here, and insert() would 409 on the second one.
+    const { error } = await supabase.from('daily_items').upsert({ source_app: 'camryn', source_id: sourceId, title, domain: 'wellness', priority: 2, energy_fit: energyFit, estimated_minutes: 20, due_today: true, scheduled_date: today, completion_state: 'pending', is_hero: false, display_order: 45, unlock_order: 0, user_id: userId }, { onConflict: 'source_id' });
     if (error) console.error('[camrynSync] upsertChatTask insert failed:', error);
   } catch (err) {
     console.error('[camrynSync] upsertChatTask failed:', err);
@@ -77,7 +81,16 @@ async function upsertDailyItems(taskShortTitles: string[], energy: string, userI
       return;
     }
 
-    const { error } = await supabase.from('daily_items').insert({
+    // upsert, not insert: the preceding select-then-branch above is two
+    // round trips, not one atomic step. Two concurrent calls for a slot
+    // that doesn't have a row yet (e.g. React StrictMode's dev-mode double
+    // effect invoke, or a fast toggle right after page load) can both see
+    // "not found" and both reach here, and a plain insert() would 409 on
+    // the second one against daily_items_source_id_key. Only reachable
+    // when no row exists yet, so this can't clobber a Front-Door-set
+    // 'completed' status -- that only exists on a row that's already there,
+    // which takes the existing-row branch above instead.
+    const { error } = await supabase.from('daily_items').upsert({
       source_app: 'camryn',
       source_id: sourceId,
       title,
@@ -92,7 +105,7 @@ async function upsertDailyItems(taskShortTitles: string[], energy: string, userI
       display_order: 40 + idx,
       unlock_order: idx,
       user_id: userId,
-    });
+    }, { onConflict: 'source_id' });
     if (error) console.error('[camrynSync] daily item insert failed:', error);
   }));
 }
