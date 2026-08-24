@@ -112,6 +112,7 @@ interface JournalRequest {
   recentContext?: string[];
   reactionSummary?: { helpful: number; not_quite: number; recentNotQuite: string[] } | null;
   lovesSnapshot?: LovesItem[];
+  periodSnapshot?: { active: boolean; startDate: string; daysInto: number };
 }
 
 interface JournalResponse {
@@ -333,6 +334,7 @@ function buildContextBlock(req: JournalRequest): string {
     if (b.energy != null) lines.push(`- Body energy score: ${b.energy}/5`);
     if (b.symptoms) lines.push(`- Symptoms noted: ${b.symptoms}`);
     if (b.cycle_status) lines.push(`- Cycle status: ${b.cycle_status}`);
+    if (req.periodSnapshot?.active) lines.push(`- Period: day ${req.periodSnapshot.daysInto} (started ${req.periodSnapshot.startDate})`);
     const vitsTaken = b.vitamins
       ? Object.entries(b.vitamins as Record<string, boolean>)
           .filter(([, v]) => v)

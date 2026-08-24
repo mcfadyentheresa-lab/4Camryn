@@ -227,6 +227,22 @@ async function fetchLovesSnapshot(userId: string): Promise<{ category: string; t
   return ((data ?? []) as { category: string; title: string; note: string }[]);
 }
 
+async function fetchPeriodSnapshot(userId: string): Promise<{ active: boolean; startDate: string; daysInto: number } | null> {
+  const { data } = await supabase
+    .from('camryn_period_log')
+    .select('start_date, end_date')
+    .eq('user_id', userId)
+    .order('start_date', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!data || data.end_date) return null;
+  const start = new Date(data.start_date + 'T12:00:00');
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  const daysInto = Math.max(1, Math.round((today.getTime() - start.getTime()) / 86400000) + 1);
+  return { active: true, startDate: data.start_date, daysInto };
+}
+
 async function fetchReactionSummary(userId: string): Promise<{ helpful: number; not_quite: number; recentNotQuite: string[] }> {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - 14);
@@ -556,7 +572,7 @@ export default function JournalSection({ userId, session, focusInput, displayNam
 
     const phaseQuests: Quest[] = PHASE_QUESTS[session.current_phase] ?? FOUNDATION_QUESTS;
 
-    const [bodySnapshot, confidenceSnapshot, foodSnapshot, intentional, vitalsSnapshot, recentContext, reactionSummary, lovesSnapshot] = await Promise.all([
+    const [bodySnapshot, confidenceSnapshot, foodSnapshot, intentional, vitalsSnapshot, recentContext, reactionSummary, lovesSnapshot, periodSnapshot] = await Promise.all([
       fetchBodySnapshot(userId),
       fetchConfidenceSnapshot(userId),
       fetchFoodSnapshot(userId),
@@ -565,6 +581,7 @@ export default function JournalSection({ userId, session, focusInput, displayNam
       fetchRecentContext(userId, today),
       fetchReactionSummary(userId),
       fetchLovesSnapshot(userId),
+      fetchPeriodSnapshot(userId),
     ]);
     const masterySnapshot = buildMasterySnapshot(session.current_phase, allMastery);
     let pendingLinks: SharedLink[] = [];
@@ -605,6 +622,7 @@ export default function JournalSection({ userId, session, focusInput, displayNam
           recentContext: recentContext.length > 0 ? recentContext : undefined,
           reactionSummary: (reactionSummary.helpful + reactionSummary.not_quite) > 0 ? reactionSummary : undefined,
           lovesSnapshot: lovesSnapshot.length > 0 ? lovesSnapshot : undefined,
+          periodSnapshot: periodSnapshot ?? undefined,
         }),
       });
       if (resp.ok) {
