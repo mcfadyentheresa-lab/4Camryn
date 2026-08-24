@@ -58,6 +58,16 @@ interface Session {
   last_winddown: string | null;
 }
 
+// Returns today's local date as YYYY-MM-DD, matching the convention every
+// write path (completion.ts, MainContent.tsx, camrynSyncService.ts) already
+// uses for save_date -- never toISOString(), which reports UTC and drifts
+// onto the wrong calendar day for part of the evening in any timezone west
+// of UTC.
+function localToday(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 function computeIsNightMode(energyLevel: string): boolean {
   const hour = new Date().getHours();
   // Low-energy days: night mode starts at 7pm; otherwise 9pm
@@ -137,7 +147,7 @@ function App() {
   const [savedToday, setSavedToday] = useState(false);
   const [saveErrorMsg, setSaveErrorMsg] = useState<string | null>(null);
   const showSaveError = saveErrorMsg !== null;
-  const saveRetryFnRef = useRef<(() => Promise<void>) | null>(null);
+  const saveRetryFnRef = useRef<(() => void | Promise<void>) | null>(null);
 
   const dismissSaveError = () => {
     setSaveErrorMsg(null);
@@ -152,6 +162,7 @@ function App() {
   };
   const [dailyStreak, setDailyStreak] = useState(0);
   const [daysSinceLastSave, setDaysSinceLastSave] = useState<number | null>(null);
+  const [todayCheckedItems, setTodayCheckedItems] = useState<boolean[] | null>(null);
   const [frontDoorCompletions, setFrontDoorCompletions] = useState<number[]>([]);
   const frontDoorChannelRef = useRef<ReturnType<typeof subscribeFrontDoorCompletions> | null>(null);
 
@@ -166,13 +177,6 @@ function App() {
       tag: shortTag(t.tag),
       body: t.body,
     };
-  }, [session?.current_phase, session?.energy, session?.stress, session?.cycle_phase_name]);
-
-  const allTaskShortTitles = useMemo(() => {
-    if (!session) return [];
-    const shortTag = (tag: string) => tag.split('·')[1]?.trim() || tag;
-    return dailyTasks(session.current_phase, session.energy, session.stress, session.cycle_phase_name)
-      .map((t) => (t as any).shortTitle || shortTag(t.tag));
   }, [session?.current_phase, session?.energy, session?.stress, session?.cycle_phase_name]);
 
   useEffect(() => {
@@ -296,19 +300,27 @@ function App() {
     // use, so fetching the full history isn't a real cost.
     const { data: savesData } = await supabase
       .from('camryn_daily_saves')
-      .select('save_date, tasks_complete, tasks_total')
+      .select('save_date, tasks_complete, tasks_total, checked_items')
       .eq('user_id', userId)
       .order('save_date', { ascending: false });
     if (savesData && savesData.length > 0) {
       const dates = new Set(savesData.map((r: any) => r.save_date as string));
-      const todayStr = new Date().toISOString().split('T')[0];
+      // save_date is always written from the local calendar day (see
+      // localToday() in completion.ts, MainContent.tsx, camrynSyncService.ts)
+      // -- toISOString() reports UTC, which is a different calendar day for
+      // part of the evening in any timezone west of UTC (confirmed live:
+      // 8:46pm Eastern already reads as tomorrow in UTC). Using it here
+      // missed today's own just-written row and the streak count.
+      const todayStr = localToday();
+      const todayRow = savesData.find((r: any) => r.save_date === todayStr);
+      setTodayCheckedItems((todayRow?.checked_items as boolean[] | null | undefined) ?? null);
       let streak = 0;
       let cursor = new Date();
       // Count streak — allow today or yesterday as start (today might not be saved yet)
       const startOffset = dates.has(todayStr) ? 0 : 1;
       cursor.setDate(cursor.getDate() - startOffset);
       while (true) {
-        const d = cursor.toISOString().split('T')[0];
+        const d = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}-${String(cursor.getDate()).padStart(2, '0')}`;
         if (!dates.has(d)) break;
         streak++;
         cursor.setDate(cursor.getDate() - 1);
@@ -326,6 +338,7 @@ function App() {
       }
     } else {
       setDaysSinceLastSave(null);
+      setTodayCheckedItems(null);
     }
 
     setShowCheckin((prev) => prev || shouldShowCheckin());
@@ -389,60 +402,27 @@ function App() {
     }
   };
 
-  const handleSaveDay = async (tasksComplete: number, tasksTotal: number, checkedItems?: boolean[]) => {
-    if (!user || !session) return;
+  // The actual daily-save write (camryn_daily_saves upsert, save_count
+  // recompute, Front Door sync) now happens inside MainContent via
+  // recordSlotCompletion (src/lib/completion.ts) -- these three handlers
+  // are UI-state-only, mirroring what handleSaveDay used to do around its
+  // own write, kept here because session/syncDot/streak state all live in
+  // this component.
+  const handleDaySaveStart = () => setSyncDot('saving');
 
-    const today = new Date().toISOString().split('T')[0];
-    const isComplete = tasksComplete === tasksTotal;
+  const handleDaySaveSuccess = (saveCount: number) => {
+    setSession((prev) => (prev ? { ...prev, save_count: saveCount } : prev));
+    setSyncDot('synced');
+    setSavedToday(true);
+    setDaysSinceLastSave(0);
+    setDailyStreak((prev) => (prev === 0 ? 1 : prev));
+    setTimeout(() => setSyncDot('idle'), 3000);
+  };
 
-    const attemptSave = async () => {
-      setSyncDot('saving');
-
-      const { error: dailySaveError } = await supabase
-        .from('camryn_daily_saves')
-        .upsert([
-          {
-            user_id: user.id,
-            save_date: today,
-            tasks_complete: tasksComplete,
-            tasks_total: tasksTotal,
-            is_complete: isComplete,
-          },
-        ], { onConflict: 'user_id,save_date' });
-
-      if (dailySaveError) {
-        console.error('dailySave upsert failed:', dailySaveError);
-        setSyncDot('error');
-        setSaveErrorMsg('Could not save today\u2019s progress. Your work is still here — just needs to sync.');
-        saveRetryFnRef.current = attemptSave;
-        return;
-      }
-
-      const { count: realSaveCount, error: countError } = await supabase
-        .from('camryn_daily_saves')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('is_complete', true);
-      if (countError) {
-        console.error('save_count recompute failed:', countError);
-      } else if (realSaveCount !== null) {
-        await updateSessionField('save_count', realSaveCount);
-      }
-
-      setSyncDot('synced');
-      setSavedToday(true);
-      syncToFrontDoor({
-        userId: user.id,
-        energy: session.energy,
-        taskShortTitles: allTaskShortTitles,
-        checkedItems,
-      }).catch(() => {});
-      setDaysSinceLastSave(0);
-      setDailyStreak((prev) => (prev === 0 ? 1 : prev));
-      setTimeout(() => setSyncDot('idle'), 3000);
-    };
-
-    attemptSave();
+  const handleDaySaveError = (retry: () => void) => {
+    setSyncDot('error');
+    setSaveErrorMsg('Could not save today’s progress. Your work is still here — just needs to sync.');
+    saveRetryFnRef.current = retry;
   };
 
   const handleOnboardingComplete = async (data: {
@@ -696,7 +676,9 @@ function App() {
               session={session}
               allMastery={allMastery}
               onAllMasteryChange={setAllMastery}
-              onSaveDay={handleSaveDay}
+              onDaySaveStart={handleDaySaveStart}
+              onDaySaveSuccess={handleDaySaveSuccess}
+              onDaySaveError={handleDaySaveError}
               onNavigateToJournal={() => handleViewChange('journal')}
               onNavigateTo={(v) => handleViewChange(v as AppView)}
               onPhaseProgressChange={setPhaseProgress}
@@ -704,6 +686,7 @@ function App() {
               dailyStreak={dailyStreak}
               daysSinceLastSave={daysSinceLastSave}
               frontDoorCompletions={frontDoorCompletions}
+              todayCheckedItems={todayCheckedItems}
               onPeriodStart={handleCycleDateChange}
             />
           )}

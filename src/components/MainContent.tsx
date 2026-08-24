@@ -14,6 +14,7 @@ import {
   type AllPhaseMastery,
 } from '../lib/mastery';
 import { getDailyCoachingSentence, getCompletionNote, getPhasePosition } from '../lib/dailyCoaching';
+import { recordSlotCompletion } from '../lib/completion';
 import MasteryCard from './MasteryCard';
 import CycleActionTile from './CycleActionTile';
 import WeeklyFocusCard from './WeeklyFocusCard';
@@ -35,7 +36,9 @@ interface MainContentProps {
   session: Session;
   allMastery: AllPhaseMastery;
   onAllMasteryChange: (updated: AllPhaseMastery | ((prev: AllPhaseMastery) => AllPhaseMastery)) => void;
-  onSaveDay: (complete: number, total: number, checkedItems?: boolean[]) => void;
+  onDaySaveStart?: () => void;
+  onDaySaveSuccess?: (saveCount: number) => void;
+  onDaySaveError?: (retry: () => void) => void;
   onNavigateToJournal?: () => void;
   onNavigateTo?: (view: string) => void;
   onPhaseProgressChange?: (pct: number) => void;
@@ -43,6 +46,7 @@ interface MainContentProps {
   dailyStreak?: number;
   daysSinceLastSave?: number | null;
   frontDoorCompletions?: number[];
+  todayCheckedItems?: boolean[] | null;
   onPeriodStart?: (dateStr: string) => void;
 }
 
@@ -80,12 +84,15 @@ export default function MainContent({
   session,
   allMastery,
   onAllMasteryChange,
-  onSaveDay,
+  onDaySaveStart,
+  onDaySaveSuccess,
+  onDaySaveError,
   onPhaseProgressChange,
   onPhaseComplete,
   dailyStreak = 0,
   daysSinceLastSave = null,
   frontDoorCompletions = [],
+  todayCheckedItems = null,
   onPeriodStart,
 }: MainContentProps) {
   const [checkedItems, setCheckedItems] = useState<boolean[]>(() => [false, false, false]);
@@ -130,11 +137,16 @@ export default function MainContent({
   const quests = useMemo(() => PHASE_QUESTS[session.current_phase] ?? PHASE_QUESTS[1], [session.current_phase]);
   const masteryData: MasteryData = useMemo(() => ensureDailyPick(allMastery[pKey], quests), [allMastery, pKey, quests]);
 
-  const scheduleSave = useCallback((updated: AllPhaseMastery) => {
+  // Reads latestAllMasteryRef at fire time rather than closing over the
+  // value passed in when scheduled -- every allMastery change (whichever
+  // component caused it) reschedules this via the effect below, so the
+  // debounced write always lands the freshest snapshot instead of a stale
+  // one that could clobber a newer write that landed in between.
+  const scheduleSave = useCallback(() => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
       saveTimerRef.current = null;
-      saveAllMastery(userId, updated).catch((err) => {
+      saveAllMastery(userId, latestAllMasteryRef.current).catch((err) => {
         console.error('mastery save failed:', err);
       });
     }, 1000);
@@ -178,7 +190,7 @@ export default function MainContent({
       skipMasterySideEffectsRef.current = false;
       return;
     }
-    scheduleSave(allMastery);
+    scheduleSave();
     const pct = calcProgressPct(masteryData, quests);
     onPhaseProgressChange?.(pct);
     // No phase-number gate here -- this used to be capped at <= 3 (a leftover
@@ -189,28 +201,6 @@ export default function MainContent({
     }
   }, [allMastery]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const autoMarkQuest = useCallback((questId: string, shouldMark: boolean) => {
-    updateMasteryData((prev) => {
-      const qs = prev.quests[questId];
-      if (!qs) return prev;
-      const alreadyDone = isTodayCompleted(qs.completedDates);
-      const streak = calcStreak(qs.completedDates, qs.targetDays);
-      const isComplete = streak >= qs.targetDays;
-
-      if (shouldMark && alreadyDone) return prev;
-      if (!shouldMark && !alreadyDone) return prev;
-      if (isComplete && !alreadyDone) return prev;
-
-      return {
-        ...prev,
-        quests: {
-          ...prev.quests,
-          [questId]: { ...qs, completedDates: toggleToday(qs.completedDates) },
-        },
-      };
-    });
-  }, [updateMasteryData]);
-
   const toggleTask = useCallback((idx: number, newChecked?: boolean[]) => {
     setCheckedItems((prev) => {
       const next = newChecked ?? [...prev];
@@ -220,42 +210,67 @@ export default function MainContent({
     });
   }, []);
 
-  // Runs the quest marks / auto-save / celebration for a checkedItems change
+  // Runs the quest marks / save / celebration for a checkedItems change
   // queued by toggleTask or the Front Door completions effect below, once the
   // state has actually committed -- see the ref comment above for why this
-  // can't live inside the setCheckedItems updater itself.
+  // can't live inside the setCheckedItems updater itself. Each touched slot
+  // is written through recordSlotCompletion (src/lib/completion.ts), the one
+  // place that now owns mastery_data, camryn_daily_saves, save_count, and
+  // the Front Door mirror for a task-slot change -- replacing the old split
+  // between autoMarkQuest's debounced mastery save and App.tsx's immediate
+  // onSaveDay, which could land out of order against each other.
   useEffect(() => {
     const pending = pendingCheckedSideEffectsRef.current;
     if (!pending) return;
     pendingCheckedSideEffectsRef.current = null;
     const { next, touchedIndices, origin } = pending;
-
-    for (const idx of touchedIndices) {
-      const questId = questIdFromTag(tasks[idx]?.tag || '', session.current_phase);
-      if (questId) autoMarkQuest(questId, next[idx]);
-    }
-
-    // Saving today's progress happens on any toggle -- but marking the
-    // "daily-checkin" quest specifically does not; that's handled above,
-    // per-task, via questIdFromTag (Foundation · Awareness -> daily-checkin)
-    // now that the mapping is correct. A blanket mark-on-any-toggle here
-    // used to make completing *any* task also check off the "Take your
-    // 5-minute check-in" task's box, regardless of which task was actually
-    // done.
     const doneCount = next.filter(Boolean).length;
 
-    if (origin === 'toggle') {
-      if (!savedRef.current || doneCount > 0) {
-        onSaveDay(doneCount, 3, next);
+    // Preserve the original guard: once at least one real save has gone
+    // through this session, don't re-save a toggle that nets out to nothing
+    // done (e.g. a rapid check/uncheck). Front Door catch-ups always save.
+    if (origin === 'toggle' && savedRef.current && doneCount === 0) return;
+
+    const retry = () => {
+      pendingCheckedSideEffectsRef.current = pending;
+      setCheckedItems((c) => [...c]);
+    };
+
+    const taskShortTitles = tasks.map((t) => (t as any).shortTitle || t.tag.split('·')[1]?.trim() || t.tag);
+
+    (async () => {
+      onDaySaveStart?.();
+      try {
+        let mastery = latestAllMasteryRef.current;
+        let saveCount = session.save_count;
+        for (const idx of touchedIndices) {
+          const questId = questIdFromTag(tasks[idx]?.tag || '', session.current_phase);
+          const result = await recordSlotCompletion({
+            userId,
+            phase: session.current_phase,
+            questId,
+            checked: next[idx],
+            allMastery: mastery,
+            allChecked: next,
+            taskShortTitles,
+            energy: session.energy,
+          });
+          mastery = result.mastery;
+          saveCount = result.saveCount;
+          onAllMasteryChange(mastery);
+        }
         savedRef.current = true;
+        onDaySaveSuccess?.(saveCount);
+        if (origin === 'toggle') {
+          if (doneCount === 3) setTimeout(() => setShowCelebration(true), 200);
+        } else if (next.every(Boolean)) {
+          setShowCelebration(true);
+        }
+      } catch (err) {
+        console.error('recordSlotCompletion failed:', err);
+        onDaySaveError?.(retry);
       }
-      if (doneCount === 3) {
-        setTimeout(() => setShowCelebration(true), 200);
-      }
-    } else {
-      onSaveDay(doneCount, 3, next);
-      if (next.every(Boolean)) setShowCelebration(true);
-    }
+    })();
   }, [checkedItems]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleMasteryToggle = useCallback((id: string) => {
@@ -286,11 +301,15 @@ export default function MainContent({
     // Accumulation tasks reset visually each day unless completed again today;
     // progress is based on dated completion history, not a carry-forward boolean.
     // Tasks with no quest behind them (e.g. the cycle task) have no mastery data
-    // to derive from, so fall back to today's Front Door completions instead of
-    // unconditionally false -- otherwise any unrelated quest update wipes them.
+    // to derive from, so read today's own checked_items row first (the slot's
+    // real home now -- see completion.ts) and only fall back to Front Door's
+    // mirror for accounts on a daily_saves row from before that column existed.
     const derived = tasks.map((task, idx) => {
       const questId = questIdFromTag(task.tag, session.current_phase);
-      if (!questId) return frontDoorCompletions.includes(idx);
+      if (!questId) {
+        if (todayCheckedItems && idx < todayCheckedItems.length) return !!todayCheckedItems[idx];
+        return frontDoorCompletions.includes(idx);
+      }
       const qs = masteryData.quests[questId];
       return qs ? isTodayCompleted(qs.completedDates) : false;
     });
@@ -299,7 +318,7 @@ export default function MainContent({
     if (derived.every(Boolean)) setShowCelebration(true);
     else setShowCelebration(false);
     savedRef.current = false;
-  }, [session.current_phase, masteryData, todayKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [session.current_phase, masteryData, todayKey, todayCheckedItems]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Apply completions from Front Door whenever the list updates (real-time or on load)
   useEffect(() => {
