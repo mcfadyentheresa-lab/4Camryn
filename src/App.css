@@ -375,6 +375,11 @@
   flex: 1;
 }
 
+.period-toggle-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
 .period-toggle {
   flex-shrink: 0;
   width: 32px;
@@ -395,6 +400,62 @@
   background: #fce4ec;
   border-color: #c2405e;
   color: #c2405e;
+}
+
+/* ── Period backdate popover ──────────────────────── */
+.period-picker-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+
+.period-picker-pop {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 41;
+  width: 220px;
+  padding: 12px;
+  border-radius: var(--r-sm);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-hover);
+}
+
+.period-picker-label {
+  font-size: 0.77rem;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.period-picker-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.period-picker-cancel,
+.period-picker-save {
+  flex: 1;
+  padding: 7px 0;
+  border-radius: var(--r-sm);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink-2);
+}
+
+.period-picker-save {
+  background: #c2405e;
+  border-color: #c2405e;
+  color: #fff;
+}
+
+.period-picker-save:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .streak-banner {

@@ -233,7 +233,11 @@ async function fetchPeriodSnapshot(userId: string): Promise<{ active: boolean; s
     .from('camryn_period_log')
     .select('start_date, end_date')
     .eq('user_id', userId)
+    // See the matching comment in PeriodToggle.tsx: backdating means
+    // start_date is no longer guaranteed unique per row, so created_at
+    // breaks ties deterministically toward the most recently created log.
     .order('start_date', { ascending: false })
+    .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
   if (!data || data.end_date) return null;
