@@ -1,9 +1,9 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { supabase } from './lib/supabase';
+import { resetAllCompletion } from './lib/completion';
 import { PROTOCOL, dayOfCycleFromDate, phaseFromDay, dailyTasks, daysCompletedInPhase } from './lib/protocol';
 import {
   loadAllMastery,
-  saveAllMastery,
   PHASE_QUESTS,
   calcProgressPct,
   ensureDailyPick,
@@ -533,23 +533,24 @@ function App() {
 
   const handleProtocolRestart = async () => {
     if (!session || !user) return;
-    const blank: AllPhaseMastery = {
-      phase1: { quests: {}, pickDate: '', pickId: '' },
-      phase2: { quests: {}, pickDate: '', pickId: '' },
-      phase3: { quests: {}, pickDate: '', pickId: '' },
-      phase4: { quests: {}, pickDate: '', pickId: '' },
-      phase5: { quests: {}, pickDate: '', pickId: '' },
-      phase6: { quests: {}, pickDate: '', pickId: '' },
-    };
+    // resetAllCompletion also snapshots phase_start_save_count to the current
+    // true save_count -- the old hand-rolled version here only blanked
+    // mastery_data and left phase_start_save_count at wherever the just-
+    // finished Phase 6 run left it (e.g. ~150), so daysCompletedInPhase for
+    // the restarted Phase 1 would read save_count - 150 instead of starting
+    // from 0, staying wrong for the entire new run until enough real days
+    // eventually exceeded that stale snapshot.
+    let mastery: AllPhaseMastery;
     try {
-      await saveAllMastery(user.id, blank);
+      const result = await resetAllCompletion(user.id);
+      mastery = result.mastery;
     } catch (err) {
       console.error('protocol restart failed (mastery reset):', err);
       setSaveErrorMsg('Could not restart the protocol. Please try again.');
       saveRetryFnRef.current = () => handleProtocolRestart();
       return;
     }
-    setAllMastery(blank);
+    setAllMastery(mastery);
     const { data, error } = await supabase
       .from('camryn_sessions')
       .update({ current_phase: 1, protocol_complete: false, protocol_completed_at: null, protocol_mode: 'protocol' })
@@ -761,7 +762,7 @@ function App() {
           )}
           {view === 'profile' && (
             <div className="lane-single">
-              <ProfileSection userId={user.id} onReset={() => loadSession(user.id)} />
+              <ProfileSection userId={user.id} onReset={() => loadSession(user.id)} onMasteryReset={setAllMastery} />
             </div>
           )}
         </div>

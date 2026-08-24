@@ -1,11 +1,8 @@
 import { useEffect, useState } from 'react';
-import type { SupabaseClient } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { VITAMIN_LABELS, ENV_LABELS } from '../lib/constants';
-
-// daily_items is a shared FrontDoor table not in database.types.ts (see
-// camrynSyncService.ts) -- stays untyped here for the same reason.
-const untypedSupabase = supabase as unknown as SupabaseClient;
+import { resetAllCompletion } from '../lib/completion';
+import type { AllPhaseMastery } from '../lib/mastery';
 
 function ProfileRow({ label, value, unit }: { label: string; value: string | number; unit?: string }) {
   return (
@@ -44,6 +41,7 @@ interface SpaceRow {
 interface ProfileSectionProps {
   userId: string;
   onReset?: () => void | Promise<void>;
+  onMasteryReset?: (mastery: AllPhaseMastery) => void;
 }
 
 function avg(nums: number[]): number | null {
@@ -98,7 +96,7 @@ const LANES = [
 
 type LaneId = typeof LANES[number]['id'];
 
-export default function ProfileSection({ userId, onReset }: ProfileSectionProps) {
+export default function ProfileSection({ userId, onReset, onMasteryReset }: ProfileSectionProps) {
   const [bodyRows, setBodyRows] = useState<BodyRow[]>([]);
   const [confRows, setConfRows] = useState<ConfidenceRow[]>([]);
   const [spaceRows, setSpaceRows] = useState<SpaceRow[]>([]);
@@ -112,43 +110,30 @@ export default function ProfileSection({ userId, onReset }: ProfileSectionProps)
     setResetting(true);
     setResetError(null);
 
-    // save_count is a lifetime counter, recomputed from camryn_daily_saves on
-    // every save (see handleSaveDay in App.tsx) -- it can't be forced to 0
-    // and stay there, since the next save reasserts the true historical
-    // count. Instead, snapshot the current true count into
-    // phase_start_save_count, exactly like normal phase advancement does
-    // (App.tsx: phase_start_save_count: session.save_count). That makes
-    // "days in phase" correctly read 0 from here forward without fighting
-    // the recompute.
-    const { count: trueSaveCount, error: countError } = await supabase
-      .from('camryn_daily_saves')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .eq('is_complete', true);
-    if (countError) {
-      console.error('reset: save_count recompute failed:', countError);
+    // resetAllCompletion (src/lib/completion.ts) owns the mastery_data blank,
+    // the save_count/phase_start_save_count snapshot (save_count is a
+    // lifetime counter recomputed from camryn_daily_saves, so it can't be
+    // forced to 0 and stay there -- see that function's own comment), today's
+    // checked_items clear, and the Front Door daily_items reset -- all the
+    // same work this handler used to do by hand across three separate calls.
+    let mastery: AllPhaseMastery;
+    try {
+      const result = await resetAllCompletion(userId);
+      mastery = result.mastery;
+    } catch (err) {
+      console.error('protocol reset failed (completion reset):', err);
       setResetting(false);
       setResetError('Could not reset — try again.');
       return;
     }
-    const currentSaveCount = trueSaveCount ?? 0;
+    onMasteryReset?.(mastery);
 
     const { error } = await supabase
       .from('camryn_sessions')
       .update({
         current_phase: 1,
-        save_count: currentSaveCount,
-        phase_start_save_count: currentSaveCount,
         protocol_complete: false,
         protocol_completed_at: null,
-        mastery_data: {
-          phase1: { quests: {}, pickDate: '', pickId: '' },
-          phase2: { quests: {}, pickDate: '', pickId: '' },
-          phase3: { quests: {}, pickDate: '', pickId: '' },
-          phase4: { quests: {}, pickDate: '', pickId: '' },
-          phase5: { quests: {}, pickDate: '', pickId: '' },
-          phase6: { quests: {}, pickDate: '', pickId: '' },
-        },
       })
       .eq('user_id', userId);
     if (error) {
@@ -156,23 +141,6 @@ export default function ProfileSection({ userId, onReset }: ProfileSectionProps)
       console.error('protocol reset failed:', error);
       setResetError('Could not reset — try again.');
       return;
-    }
-
-    // The Front Door widget (daily_items, a table shared with other systems --
-    // see camrynSyncService.ts) independently remembers today's task
-    // completions and re-applies them into mastery_data the moment the Today
-    // screen reloads, silently undoing the reset for anything completed
-    // earlier today. Scoped tightly to today + this user + Camryn's own rows
-    // so nothing outside this reset's intent is touched.
-    const today = new Date().toISOString().split('T')[0];
-    const { error: frontDoorError } = await untypedSupabase
-      .from('daily_items')
-      .update({ completion_state: 'pending' })
-      .eq('user_id', userId)
-      .eq('source_app', 'camryn')
-      .eq('scheduled_date', today);
-    if (frontDoorError) {
-      console.error('reset: front door completion reset failed:', frontDoorError);
     }
 
     setResetting(false);
