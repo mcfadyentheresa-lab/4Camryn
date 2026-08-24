@@ -4,6 +4,7 @@ import { resetAllCompletion } from './lib/completion';
 import { PROTOCOL, dayOfCycleFromDate, phaseFromDay, dailyTasks, daysCompletedInPhase } from './lib/protocol';
 import {
   loadAllMastery,
+  blankAllMastery,
   PHASE_QUESTS,
   calcProgressPct,
   ensureDailyPick,
@@ -81,15 +82,6 @@ const PHASE_COLORS: Record<number, { fill: string; track: string; soft: string }
   3: { fill: 'var(--phase-3)', track: 'var(--phase-3-track)', soft: 'var(--phase-3-soft)' },
 };
 
-const BLANK_MASTERY: AllPhaseMastery = {
-  phase1: { quests: {}, pickDate: '', pickId: '' },
-  phase2: { quests: {}, pickDate: '', pickId: '' },
-  phase3: { quests: {}, pickDate: '', pickId: '' },
-  phase4: { quests: {}, pickDate: '', pickId: '' },
-  phase5: { quests: {}, pickDate: '', pickId: '' },
-  phase6: { quests: {}, pickDate: '', pickId: '' },
-};
-
 interface PhaseProgressBarProps {
   phase: number;
   phaseName: string;
@@ -138,7 +130,7 @@ function App() {
   });
   const handleViewChange = (v: AppView) => { setView(v); localStorage.setItem('camryn_view', v); };
   const [phaseProgress, setPhaseProgress] = useState(0);
-  const [allMastery, setAllMastery] = useState<AllPhaseMastery>(BLANK_MASTERY);
+  const [allMastery, setAllMastery] = useState<AllPhaseMastery>(() => blankAllMastery());
   const [graduatingPhase, setGraduatingPhase] = useState<number | null>(null);
   const [masteryLoaded, setMasteryLoaded] = useState(false);
   const [showCheckin, setShowCheckin] = useState(false);

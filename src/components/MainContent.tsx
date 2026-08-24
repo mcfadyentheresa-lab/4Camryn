@@ -109,12 +109,13 @@ export default function MainContent({
   const savedRef = useRef(false);
   const skipMasterySideEffectsRef = useRef(true);
   const latestAllMasteryRef = useRef(allMastery);
-  // Side effects for a checkedItems change (quest marks, onSaveDay, celebration)
+  // Side effects for a checkedItems change (recordSlotCompletion, celebration)
   // run from a useEffect below, not from inside the setCheckedItems updater --
   // updater functions run as part of React's render phase for this component,
-  // and calling another component's setState (autoMarkQuest/onSaveDay both
-  // eventually call setState on App) from there triggers "Cannot update a
-  // component while rendering a different component".
+  // and calling another component's setState (onAllMasteryChange/
+  // onDaySaveSuccess both eventually call setState on App) from there
+  // triggers "Cannot update a component while rendering a different
+  // component".
   const pendingCheckedSideEffectsRef = useRef<{
     next: boolean[];
     touchedIndices: number[];
@@ -302,8 +303,12 @@ export default function MainContent({
     // progress is based on dated completion history, not a carry-forward boolean.
     // Tasks with no quest behind them (e.g. the cycle task) have no mastery data
     // to derive from, so read today's own checked_items row first (the slot's
-    // real home now -- see completion.ts) and only fall back to Front Door's
-    // mirror for accounts on a daily_saves row from before that column existed.
+    // real home now -- see completion.ts). The Front Door fallback below is
+    // NOT dead code, despite the consolidation plan assuming it would become
+    // one once checked_items existed -- todayCheckedItems is null until
+    // Camryn's own first save of the day (or a pre-migration row), so it's
+    // still the only way a completion Front Door already recorded today shows
+    // up before the user touches anything in Camryn itself.
     const derived = tasks.map((task, idx) => {
       const questId = questIdFromTag(task.tag, session.current_phase);
       if (!questId) {
