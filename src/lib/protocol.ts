@@ -457,7 +457,14 @@ export function phaseFromDay(day: number) {
 // celebration both need to agree on. Don't read session.save_count directly
 // for a "day N" display; go through this instead.
 export function daysCompletedInPhase(saveCount: number, phaseStartSaveCount: number): number {
-  return (saveCount || 0) - (phaseStartSaveCount || 0);
+  // save_count is live (recomputed from camryn_daily_saves on every save) and
+  // can legitimately drop if a previously-complete day gets unmarked later --
+  // phase_start_save_count is a fixed snapshot from whenever the phase began,
+  // so it can end up higher than the current true count. Floor at 0 rather
+  // than show a negative number: unlike flooring at 1 (which would falsely
+  // claim a day of progress that hasn't happened), 0 is never dishonest --
+  // there's no such thing as negative days completed.
+  return Math.max(0, (saveCount || 0) - (phaseStartSaveCount || 0));
 }
 
 export function dailyTasks(
