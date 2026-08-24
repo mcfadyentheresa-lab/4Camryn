@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import { calcStreak, FOUNDATION_QUESTS, PHASE_QUESTS, isTodayCompleted, toggleToday, saveAllMastery, ensureDailyPick, type AllPhaseMastery, type Quest, type MasteryData } from '../lib/mastery';
+import { calcStreak, FOUNDATION_QUESTS, PHASE_QUESTS, type AllPhaseMastery, type Quest, type MasteryData } from '../lib/mastery';
+import { markQuestsCompleted } from '../lib/completion';
 import { getIntentionalAction } from '../lib/cycleActions';
 import CamrynAvatar from './ui/CamrynAvatar';
 import type { PersonalNote } from '../App';
@@ -647,7 +648,10 @@ export default function JournalSection({ userId, session, focusInput, displayNam
         // Apply recognized quest completions to mastery. Reads from the ref
         // (not the `allMastery` prop) so this merges against whatever the
         // "today" tab has done since this message was sent, not a snapshot
-        // from before the await for Camryn's reply.
+        // from before the await for Camryn's reply. Not awaited here so a
+        // slow save can't delay the chat reply appearing -- the UI update
+        // (onMasteryUpdate) lands once markQuestsCompleted's save confirms,
+        // same save-then-reflect ordering MainContent's toggle flow uses.
         const currentAllMastery = latestAllMasteryRef.current;
         if (
           Array.isArray(json.recognizedQuests) &&
@@ -655,34 +659,13 @@ export default function JournalSection({ userId, session, focusInput, displayNam
           currentAllMastery &&
           onMasteryUpdate
         ) {
-          const pKey = session.current_phase === 2 ? 'phase2'
-            : session.current_phase === 3 ? 'phase3'
-            : session.current_phase === 4 ? 'phase4'
-            : session.current_phase === 5 ? 'phase5'
-            : session.current_phase === 6 ? 'phase6'
-            : 'phase1';
-          let phaseData = ensureDailyPick(currentAllMastery[pKey as keyof AllPhaseMastery], phaseQuests);
-          let changed = false;
-          for (const questId of json.recognizedQuests as string[]) {
-            const qs = phaseData.quests[questId];
-            if (!qs) continue;
-            if (isTodayCompleted(qs.completedDates)) continue;
-            phaseData = {
-              ...phaseData,
-              quests: {
-                ...phaseData.quests,
-                [questId]: { ...qs, completedDates: toggleToday(qs.completedDates) },
-              },
-            };
-            changed = true;
-          }
-          if (changed) {
-            const updated: AllPhaseMastery = { ...currentAllMastery, [pKey]: phaseData };
-            onMasteryUpdate(updated);
-            saveAllMastery(userId, updated).catch((err) => {
+          markQuestsCompleted(userId, session.current_phase, json.recognizedQuests as string[], currentAllMastery)
+            .then((updated) => {
+              if (updated) onMasteryUpdate(updated);
+            })
+            .catch((err) => {
               console.error('[journal] mastery save failed:', err);
             });
-          }
         }
 
         if (isNightMode && json.winddownSummary && onWinddownUpdate) {
