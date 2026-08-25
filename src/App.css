@@ -5809,7 +5809,7 @@ button.camryn-orb:focus-visible .camryn-orb-sphere {
   font-size: 0.8rem;
 }
 
-.food-macro-bar-sep { color: var(--line); }
+.food-macro-bar-sep { color: var(--muted); }
 .food-macro-bar-target { color: var(--muted); }
 .food-macro-bar-remaining { color: var(--muted); font-style: italic; }
 .food-macro-bar-over { color: #c0392b; font-style: italic; }
