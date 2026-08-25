@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Html5Qrcode } from 'html5-qrcode';
+import { Html5Qrcode, Html5QrcodeScannerState } from 'html5-qrcode';
 
 export interface NutritionData {
   productName: string;
@@ -53,6 +53,18 @@ async function lookupBarcode(barcode: string): Promise<NutritionData | null> {
   }
 }
 
+// stop() throws synchronously ("Cannot stop, scanner is not running or
+// paused") when the scanner isn't actively scanning, before it ever
+// returns a promise -- so a plain `.stop().catch(...)` doesn't protect
+// against it; the throw happens before .catch is even reached. Checking
+// getState() first mirrors the library's own internal precondition.
+function stopIfRunning(scanner: Html5Qrcode): Promise<void> {
+  if (scanner.getState() === Html5QrcodeScannerState.NOT_STARTED) {
+    return Promise.resolve();
+  }
+  return scanner.stop().catch(() => {});
+}
+
 export default function BarcodeScanner({ onResult, onClose }: BarcodeScannerProps) {
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const [state, setState] = useState<ScanState>('scanning');
@@ -60,8 +72,15 @@ export default function BarcodeScanner({ onResult, onClose }: BarcodeScannerProp
   const [manualBarcode, setManualBarcode] = useState('');
   const [cameraError, setCameraError] = useState(false);
   const scannedRef = useRef(false);
+  // Guards against two related races: calling stop() on a scanner whose
+  // start() is still pending (React 18 StrictMode's mount->cleanup->mount
+  // reliably triggers this in dev; a user closing the modal before the
+  // camera permission prompt resolves can trigger it in production too),
+  // and start() succeeding *after* the component has already unmounted,
+  // which would otherwise leave the camera stream running indefinitely.
+  const mountedRef = useRef(true);
 
-  useEffect(() => {
+  const startScanning = () => {
     const scannerId = 'barcode-scanner-region';
     const scanner = new Html5Qrcode(scannerId);
     scannerRef.current = scanner;
@@ -73,9 +92,11 @@ export default function BarcodeScanner({ onResult, onClose }: BarcodeScannerProp
         async (decodedText) => {
           if (scannedRef.current) return;
           scannedRef.current = true;
-          await scanner.stop().catch(() => {});
+          await stopIfRunning(scanner);
+          if (!mountedRef.current) return;
           setState('loading');
           const data = await lookupBarcode(decodedText);
+          if (!mountedRef.current) return;
           if (data) {
             setResult(data);
             setState('found');
@@ -85,12 +106,20 @@ export default function BarcodeScanner({ onResult, onClose }: BarcodeScannerProp
         },
         () => {}
       )
+      .then(() => {
+        if (!mountedRef.current) stopIfRunning(scanner);
+      })
       .catch(() => {
-        setCameraError(true);
+        if (mountedRef.current) setCameraError(true);
       });
+  };
 
+  useEffect(() => {
+    mountedRef.current = true;
+    startScanning();
     return () => {
-      scanner.stop().catch(() => {});
+      mountedRef.current = false;
+      if (scannerRef.current) stopIfRunning(scannerRef.current);
     };
   }, []);
 
@@ -111,31 +140,9 @@ export default function BarcodeScanner({ onResult, onClose }: BarcodeScannerProp
     scannedRef.current = false;
     setResult(null);
     setManualBarcode('');
+    setCameraError(false);
     setState('scanning');
-
-    const scannerId = 'barcode-scanner-region';
-    const scanner = new Html5Qrcode(scannerId);
-    scannerRef.current = scanner;
-    scanner
-      .start(
-        { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 260, height: 160 } },
-        async (decodedText) => {
-          if (scannedRef.current) return;
-          scannedRef.current = true;
-          await scanner.stop().catch(() => {});
-          setState('loading');
-          const data = await lookupBarcode(decodedText);
-          if (data) {
-            setResult(data);
-            setState('found');
-          } else {
-            setState('not_found');
-          }
-        },
-        () => {}
-      )
-      .catch(() => setCameraError(true));
+    startScanning();
   };
 
   return (
