@@ -1,5 +1,6 @@
 import type { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
 import { supabase as typedSupabase } from '../lib/supabase';
+import { localToday } from '../lib/date';
 
 // daily_items is a shared FrontDoor table not in database.types.ts, so this
 // stays untyped rather than typing it against the app's own Database
@@ -9,11 +10,6 @@ import { supabase as typedSupabase } from '../lib/supabase';
 // concurrently under the same storage key"). Reusing the one client the
 // rest of the app already has avoids that entirely.
 const supabase = typedSupabase as unknown as SupabaseClient;
-
-function localToday(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
 
 export interface CamrynSyncPayload {
   userId: string;

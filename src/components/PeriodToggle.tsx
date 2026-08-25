@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { localToday } from '../lib/date';
 
 interface PeriodToggleProps {
   userId: string;
@@ -7,11 +8,6 @@ interface PeriodToggleProps {
 }
 
 const LONG_PRESS_MS = 500;
-
-function localToday(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
 
 export default function PeriodToggle({ userId, onPeriodStart }: PeriodToggleProps) {
   const [activeLogId, setActiveLogId] = useState<string | null>(null);

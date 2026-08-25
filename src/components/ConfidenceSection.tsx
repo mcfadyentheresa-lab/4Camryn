@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { localToday, formatLocalDate } from '../lib/date';
 import { useSaveIndicator } from '../hooks/useSaveIndicator';
 import SaveIndicator from './ui/SaveIndicator';
 
@@ -15,7 +16,7 @@ function Sparkline({ entries }: { entries: DailyEntry[] }) {
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(today);
     d.setDate(today.getDate() - (6 - i));
-    return d.toISOString().split('T')[0];
+    return formatLocalDate(d);
   });
 
   return (
@@ -23,7 +24,7 @@ function Sparkline({ entries }: { entries: DailyEntry[] }) {
       {days.map((date) => {
         const entry = entries.find((e) => e.entry_date === date);
         const hasEntry = !!(entry?.confidence_note?.trim());
-        const isToday = date === today.toISOString().split('T')[0];
+        const isToday = date === formatLocalDate(today);
         const label = new Date(date + 'T12:00:00').toLocaleDateString('en', { weekday: 'short' });
         return (
           <div key={date} className="conf-sparkline-col">
@@ -111,7 +112,7 @@ interface ConfidenceSectionProps {
 }
 
 export default function ConfidenceSection({ userId, onNavigateTo }: ConfidenceSectionProps) {
-  const today = new Date().toISOString().split('T')[0];
+  const today = localToday();
   // Daily state
   const [confNote, setConfNote] = useState('');
   const [rebrandNote, setRebrandNote] = useState('');
@@ -137,7 +138,7 @@ export default function ConfidenceSection({ userId, onNavigateTo }: ConfidenceSe
     const load = async () => {
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-      const since = sevenDaysAgo.toISOString().split('T')[0];
+      const since = formatLocalDate(sevenDaysAgo);
 
       const [dailyRes, profileRes, daysRes, recentRes, rebrandRes] = await Promise.all([
         supabase

@@ -23,6 +23,7 @@ import {
   blankAllMastery,
 } from './mastery';
 import { syncToFrontDoor } from '../services/camrynSyncService';
+import { localToday } from './date';
 
 function phaseKey(phase: number): keyof AllPhaseMastery {
   if (phase === 2) return 'phase2';
@@ -31,11 +32,6 @@ function phaseKey(phase: number): keyof AllPhaseMastery {
   if (phase === 5) return 'phase5';
   if (phase === 6) return 'phase6';
   return 'phase1';
-}
-
-function localToday(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 // Toggles one quest's completedDates for today, applying the exact same

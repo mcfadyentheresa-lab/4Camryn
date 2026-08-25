@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { PROTOCOL } from '../lib/protocol';
+import { localToday } from '../lib/date';
 import CamrynOrb from './ui/CamrynOrb';
 
 interface Props {
@@ -13,22 +14,12 @@ type Step = 'energy' | 'stress' | 'done';
 
 const STORAGE_KEY = 'camryn_checkin_date';
 
-// Local date, not toISOString() (UTC) -- see the matching fix in App.tsx's
-// loadSession: for part of the evening in any timezone west of UTC, UTC has
-// already rolled to tomorrow, so a UTC-based "today" wrongly stops matching
-// the date this modal was actually marked done under, re-showing it a
-// second time on the same local calendar day.
-function today(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
 export function shouldShowCheckin(): boolean {
-  return localStorage.getItem(STORAGE_KEY) !== today();
+  return localStorage.getItem(STORAGE_KEY) !== localToday();
 }
 
 export function markCheckinDone(): void {
-  localStorage.setItem(STORAGE_KEY, today());
+  localStorage.setItem(STORAGE_KEY, localToday());
 }
 
 export default function DailyCheckinModal({ initialEnergy, initialStress, onComplete, onDismiss }: Props) {

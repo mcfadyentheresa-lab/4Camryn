@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { localToday } from './date';
 
 export interface Quest {
   id: string;
@@ -124,17 +125,6 @@ export const PHASE_QUESTS: Record<number, Quest[]> = {
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-// Returns today's local date as YYYY-MM-DD.
-// Uses local time rather than UTC so midnight rolls over with the user's clock,
-// not at a UTC offset that may fall in the middle of their afternoon or evening.
-function localToday(): string {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
 
 function prevDay(dateStr: string): string {
   // Parse at noon local time to avoid any DST boundary edge cases.

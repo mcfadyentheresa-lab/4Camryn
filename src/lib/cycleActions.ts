@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { localToday as today } from './date';
 
 export interface CycleProtocolAction {
   phase: string;
@@ -9,10 +10,6 @@ export interface CycleIntentionalAction {
   phase: string;
   text: string;
   done: boolean;
-}
-
-function today(): string {
-  return new Date().toISOString().split('T')[0];
 }
 
 async function getUserId(): Promise<string | null> {

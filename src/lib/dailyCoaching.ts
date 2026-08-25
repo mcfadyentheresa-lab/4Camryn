@@ -2,6 +2,8 @@
 // One sentence per day, cached in localStorage so it doesn't change on refresh.
 // Derived purely from cycle phase + protocol phase — no network call needed.
 
+import { localToday } from './date';
+
 interface SentenceBank {
   [cycleKey: string]: string[];
 }
@@ -106,7 +108,7 @@ interface CachedSentence {
 }
 
 export function getDailyCoachingSentence(cyclePhase: string, protocolPhase: number): string {
-  const today = new Date().toISOString().split('T')[0];
+  const today = localToday();
 
   // Return cached sentence if it was generated today
   try {
@@ -241,7 +243,7 @@ const COMPLETION_FALLBACK = [
 const COMPLETION_CACHE_KEY = 'camryn_completion_note';
 
 export function getCompletionNote(cyclePhase: string, protocolPhase: number): string {
-  const today = new Date().toISOString().split('T')[0];
+  const today = localToday();
 
   try {
     const raw = localStorage.getItem(COMPLETION_CACHE_KEY);

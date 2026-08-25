@@ -15,6 +15,7 @@ import {
 } from '../lib/mastery';
 import { getDailyCoachingSentence, getCompletionNote, getPhasePosition } from '../lib/dailyCoaching';
 import { recordSlotCompletion } from '../lib/completion';
+import { localToday } from '../lib/date';
 import MasteryCard from './MasteryCard';
 import CycleActionTile from './CycleActionTile';
 import WeeklyFocusCard from './WeeklyFocusCard';
@@ -72,12 +73,6 @@ function getSlotLabel(slot: number): string {
   return 'evening';
 }
 
-
-// Returns today's local date as YYYY-MM-DD, matching the same convention as mastery.ts.
-function localToday(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
 
 export default function MainContent({
   userId,

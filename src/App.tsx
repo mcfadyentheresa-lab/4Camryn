@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { supabase } from './lib/supabase';
 import { resetAllCompletion } from './lib/completion';
+import { localToday } from './lib/date';
 import { PROTOCOL, dayOfCycleFromDate, phaseFromDay, dailyTasks, daysCompletedInPhase } from './lib/protocol';
 import {
   loadAllMastery,
@@ -57,16 +58,6 @@ interface Session {
   protocol_mode: string;
   personal_notes: PersonalNote[];
   last_winddown: string | null;
-}
-
-// Returns today's local date as YYYY-MM-DD, matching the convention every
-// write path (completion.ts, MainContent.tsx, camrynSyncService.ts) already
-// uses for save_date -- never toISOString(), which reports UTC and drifts
-// onto the wrong calendar day for part of the evening in any timezone west
-// of UTC.
-function localToday(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 function computeIsNightMode(energyLevel: string): boolean {

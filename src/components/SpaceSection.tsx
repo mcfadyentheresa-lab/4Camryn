@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { ENV_CHECKS } from '../lib/constants';
+import { localToday } from '../lib/date';
 import { useSaveIndicator } from '../hooks/useSaveIndicator';
 import CheckIcon from './ui/CheckIcon';
 import SaveIndicator from './ui/SaveIndicator';
@@ -24,7 +25,7 @@ interface SpaceSectionProps {
 }
 
 export default function SpaceSection({ userId }: SpaceSectionProps) {
-  const today = new Date().toISOString().split('T')[0];
+  const today = localToday();
   const [entry, setEntry] = useState<SpaceEntry>(EMPTY);
   const [saveLabel, startSave, doneSave, failSave] = useSaveIndicator();
   const pendingRef = useRef<SpaceEntry>(EMPTY);

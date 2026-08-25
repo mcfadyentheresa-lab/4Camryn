@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { getWeeklyFocus, protocolWeekFromSaveCount } from '../lib/weeklyFocus';
+import { localToday } from '../lib/date';
 
 interface Props {
   phase: number;
@@ -43,7 +44,7 @@ const POOF_ANGLES = [-70, -35, -10, 10, 35, 70];
 const POOF_DURATION_MS = 380;
 
 function scienceKey() {
-  return `wf-science-read-${new Date().toISOString().split('T')[0]}`;
+  return `wf-science-read-${localToday()}`;
 }
 
 export default function WeeklyFocusCard({ phase, cyclePhaseName, saveCount }: Props) {

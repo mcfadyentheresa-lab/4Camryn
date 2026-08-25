@@ -1,4 +1,5 @@
 import { PHASE_QUESTS } from './mastery';
+import { localToday } from './date';
 
 export const PROTOCOL = {
   phases: [
@@ -399,7 +400,7 @@ export const DAILY_LEARNS: DailyLearn[] = [
 ];
 
 export function dailyLearnForToday(cyclePhaseName: string): DailyLearn {
-  const today = new Date().toISOString().split('T')[0];
+  const today = localToday();
   const seed = today.replace(/-/g, '').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
 
   const phasePrefer: Record<string, string[]> = {
@@ -655,7 +656,7 @@ export function dailyTasks(
   };
 
   const pk = String(phase);
-  const today = new Date().toISOString().split('T')[0];
+  const today = localToday();
   const phaseSeed = today.replace(/-/g, '').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
   const phaseTaskPool = (phaseTasks[pk] || phaseTasks['1'])[e] || (phaseTasks[pk] || phaseTasks['1']).Medium;
   const phaseTask = phaseTaskPool[phaseSeed % phaseTaskPool.length];

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { localToday } from '../lib/date';
 
 const NOTIF_DISMISSED_KEY = 'camryn_notif_dismissed';
 const NOTIF_TIME_KEY = 'camryn_notif_time';
@@ -29,7 +30,7 @@ function checkAndFireReminder(savedToday: boolean) {
   if (currentHour < reminderHour) return;
 
   // Only fire once per day
-  const firedKey = `camryn_notif_fired_${now.toISOString().split('T')[0]}`;
+  const firedKey = `camryn_notif_fired_${localToday()}`;
   if (localStorage.getItem(firedKey)) return;
 
   localStorage.setItem(firedKey, '1');

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import CamrynOrb from './ui/CamrynOrb';
+import { localToday } from '../lib/date';
 
 const CYCLE_PHASES = [
   { name: 'Menstruation', emoji: '🌑', desc: 'Days 1–6 · Rest, nourishment, gentle movement' },
@@ -230,7 +231,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                   className="ob-input"
                   value={lastPeriodDate}
                   onChange={(e) => setLastPeriodDate(e.target.value)}
-                  max={new Date().toISOString().split('T')[0]}
+                  max={localToday()}
                 />
               </div>
             )}

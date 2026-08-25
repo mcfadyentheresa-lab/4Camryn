@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { localToday, formatLocalDate } from '../lib/date';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const VITALS_ENDPOINT = `${SUPABASE_URL}/functions/v1/camryn-vitals`;
@@ -90,10 +91,10 @@ export default function VitalsCard({ userId }: VitalsCardProps) {
 
   useEffect(() => {
     const load = async () => {
-      const today = new Date().toISOString().split('T')[0];
+      const today = localToday();
       const cutoff14 = new Date();
       cutoff14.setDate(cutoff14.getDate() - 14);
-      const cutoff14str = cutoff14.toISOString().split('T')[0];
+      const cutoff14str = formatLocalDate(cutoff14);
 
       const [latestRes, countRes, hrv7Res] = await Promise.all([
         supabase

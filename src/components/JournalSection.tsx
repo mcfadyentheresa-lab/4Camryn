@@ -6,6 +6,7 @@ import { getIntentionalAction } from '../lib/cycleActions';
 import CamrynAvatar from './ui/CamrynAvatar';
 import type { PersonalNote } from '../App';
 import { upsertChatTask } from '../services/camrynSyncService';
+import { localToday, formatLocalDate } from '../lib/date';
 
 interface JournalEntry {
   id: string;
@@ -125,7 +126,7 @@ function renderInlineLinks(text: string): React.ReactNode {
 }
 
 async function fetchFoodSnapshot(userId: string): Promise<Record<string, any>> {
-  const today = new Date().toISOString().split('T')[0];
+  const today = localToday();
   const [entriesRes, dailyRes] = await Promise.all([
     supabase
       .from('camryn_food_entries')
@@ -147,10 +148,10 @@ async function fetchFoodSnapshot(userId: string): Promise<Record<string, any>> {
 }
 
 async function fetchVitalsSnapshot(userId: string): Promise<Record<string, any> | null> {
-  const today = new Date().toISOString().split('T')[0];
+  const today = localToday();
   const cutoff14 = new Date();
   cutoff14.setDate(cutoff14.getDate() - 14);
-  const cutoff14str = cutoff14.toISOString().split('T')[0];
+  const cutoff14str = formatLocalDate(cutoff14);
 
   const [latestRes, countRes, hrv14Res] = await Promise.all([
     supabase
@@ -210,7 +211,7 @@ async function fetchRecentContext(userId: string, todayStr: string): Promise<str
     .select('user_text, entry_date, created_at')
     .eq('user_id', userId)
     .lt('entry_date', todayStr)
-    .gte('entry_date', cutoff.toISOString().split('T')[0])
+    .gte('entry_date', formatLocalDate(cutoff))
     .order('created_at', { ascending: false })
     .limit(10);
   return ((data ?? []) as { user_text: string }[]).map((r) =>
@@ -291,7 +292,7 @@ async function fetchExistingReactions(userId: string, entryIds: string[]): Promi
 }
 
 async function fetchBodySnapshot(userId: string): Promise<Record<string, any>> {
-  const today = new Date().toISOString().split('T')[0];
+  const today = localToday();
   const { data } = await supabase
     .from('camryn_body')
     .select('energy, symptoms, cycle_status, vitamins')
@@ -302,7 +303,7 @@ async function fetchBodySnapshot(userId: string): Promise<Record<string, any>> {
 }
 
 async function fetchConfidenceSnapshot(userId: string): Promise<Record<string, any>> {
-  const today = new Date().toISOString().split('T')[0];
+  const today = localToday();
   const { data } = await supabase
     .from('camryn_confidence')
     .select('confidence_note')
@@ -324,7 +325,7 @@ interface SharedLink {
 }
 
 async function applyLogActions(userId: string, actions: LogAction[]): Promise<void> {
-  const today = new Date().toISOString().split('T')[0];
+  const today = localToday();
   for (const action of actions) {
     try {
       if (action.type === 'water' && action.amount_ml) {
@@ -503,7 +504,7 @@ export default function JournalSection({ userId, session, focusInput, displayNam
     return () => recognitionRef.current?.abort();
   }, []);
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = localToday();
   const todayEntries = entries.filter((e) => e.entry_date === today);
   const pastEntries = entries.filter((e) => e.entry_date !== today);
 

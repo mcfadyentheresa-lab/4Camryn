@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { VITAMINS } from '../lib/constants';
 import { CYCLE_PHASES, cyclePhaseFromName } from '../lib/protocol';
+import { localToday } from '../lib/date';
 import { useSaveIndicator } from '../hooks/useSaveIndicator';
 import CheckIcon from './ui/CheckIcon';
 import SaveIndicator from './ui/SaveIndicator';
@@ -115,7 +116,7 @@ export default function BodySection({
   onCyclePhaseChange,
   onCycleDateChange,
 }: BodySectionProps) {
-  const today = new Date().toISOString().split('T')[0];
+  const today = localToday();
   const [entry, setEntry] = useState<BodyEntry>(EMPTY);
   const [saveLabel, startSave, doneSave, failSave] = useSaveIndicator();
   const pendingRef = useRef<BodyEntry>(EMPTY);

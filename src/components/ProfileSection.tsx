@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { VITAMIN_LABELS, ENV_LABELS } from '../lib/constants';
 import { resetAllCompletion } from '../lib/completion';
 import type { AllPhaseMastery } from '../lib/mastery';
+import { formatLocalDate } from '../lib/date';
 
 function ProfileRow({ label, value, unit }: { label: string; value: string | number; unit?: string }) {
   return (
@@ -151,7 +152,7 @@ export default function ProfileSection({ userId, onReset, onMasteryReset }: Prof
   useEffect(() => {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - 30);
-    const cutoffStr = cutoff.toISOString().split('T')[0];
+    const cutoffStr = formatLocalDate(cutoff);
 
     const loadData = async () => {
       const [bodyRes, confRes, spaceRes] = await Promise.all([

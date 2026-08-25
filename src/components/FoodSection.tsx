@@ -4,6 +4,7 @@ import { useSaveIndicator } from '../hooks/useSaveIndicator';
 import SaveIndicator from './ui/SaveIndicator';
 import BarcodeScanner, { type NutritionData } from './BarcodeScanner';
 import { calcMacroTargets, type FoodProfile, type Goal, type ActivityBaseline, type MacroTargets } from '../lib/macros';
+import { localToday } from '../lib/date';
 
 const MEAL_TYPES = ['Breakfast', 'Lunch', 'Dinner', 'Snack'] as const;
 type MealType = (typeof MEAL_TYPES)[number];
@@ -110,7 +111,7 @@ interface FoodSectionProps {
 }
 
 export default function FoodSection({ userId, currentPhase = 1, cyclePhase = 'Not sure' }: FoodSectionProps) {
-  const today = new Date().toISOString().split('T')[0];
+  const today = localToday();
   const [entries, setEntries] = useState<FoodEntry[]>([]);
   const [summary, setSummary] = useState<DailySummary>(EMPTY_SUMMARY);
   const [profile, setProfile] = useState<FoodProfile>(EMPTY_PROFILE);
