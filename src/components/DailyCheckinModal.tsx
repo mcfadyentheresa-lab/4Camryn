@@ -13,8 +13,14 @@ type Step = 'energy' | 'stress' | 'done';
 
 const STORAGE_KEY = 'camryn_checkin_date';
 
+// Local date, not toISOString() (UTC) -- see the matching fix in App.tsx's
+// loadSession: for part of the evening in any timezone west of UTC, UTC has
+// already rolled to tomorrow, so a UTC-based "today" wrongly stops matching
+// the date this modal was actually marked done under, re-showing it a
+// second time on the same local calendar day.
 function today(): string {
-  return new Date().toISOString().split('T')[0];
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 export function shouldShowCheckin(): boolean {
