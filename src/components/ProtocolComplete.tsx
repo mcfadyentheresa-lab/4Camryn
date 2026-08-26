@@ -1,4 +1,6 @@
 import CamrynOrb from './ui/CamrynOrb';
+import { PROTOCOL } from '../lib/protocol';
+import { PHASE_MESSAGES } from '../lib/phaseMessages';
 
 interface ProtocolCompleteProps {
   displayName: string | null;
@@ -7,11 +9,16 @@ interface ProtocolCompleteProps {
   onRestart: () => void;
 }
 
-const ALL_PROOFS = [
-  { phase: 1, label: 'Foundation', items: ['Fixed sleep 21 days', 'Morning hydration 14 days', 'Fiber goal 14 days', 'Fermented food 14 days', '14-day check-in streak'] },
-  { phase: 2, label: 'Ignition', items: ['Protein target 3 weeks', 'Eating window 14 days', 'Daily walks 30 days', 'Strength 2×/week × 4 weeks', 'Skincare 30 days'] },
-  { phase: 3, label: 'Build', items: ['Cycle-adapted training 8 weeks', 'Joint mobility 30 days', 'Omega-3 60 days', 'Hormone stack 60 days', 'Bloodwork completed'] },
-];
+// Sourced from PhaseGraduationModal's PHASE_MESSAGES rather than duplicated
+// here -- this used to hand-roll its own 3-phase list (a leftover from
+// before the protocol was expanded from 3 phases/22 weeks to the current 6
+// phases/52 weeks), silently omitting Integrate, Sustain, and Thrive from
+// the one screen meant to recap the entire year.
+const ALL_PROOFS = PROTOCOL.phases.map((p) => ({
+  phase: p.id,
+  label: p.name,
+  items: PHASE_MESSAGES[p.id]?.proofs ?? [],
+}));
 
 export default function ProtocolComplete({ displayName, completedAt, onMaintain, onRestart }: ProtocolCompleteProps) {
   const dateLabel = completedAt
@@ -34,7 +41,7 @@ export default function ProtocolComplete({ displayName, completedAt, onMaintain,
           </h1>
           {dateLabel && <p className="pc-date">Completed {dateLabel}</p>}
           <p className="pc-intro">
-            Twenty-two weeks. Three phases. Fifteen mastery quests. You didn't just follow a protocol — you proved it on yourself, one day at a time. This is what the work looks like from the outside.
+            Fifty-two weeks. Six phases. Thirty mastery quests. You didn't just follow a protocol — you proved it on yourself, one day at a time. This is what the work looks like from the outside.
           </p>
         </div>
 
