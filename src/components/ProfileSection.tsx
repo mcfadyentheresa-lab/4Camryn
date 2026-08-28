@@ -184,7 +184,15 @@ export default function ProfileSection({ userId, onReset, onMasteryReset }: Prof
     loadData();
   }, [userId]);
 
-  const totalDays = bodyRows.length + confRows.length + spaceRows.length;
+  // Distinct calendar days touched across any lane -- summing row counts
+  // (or taking the max of the three) either double-counts a day logged in
+  // multiple lanes or ignores lanes the user favors less, understating real
+  // engagement on the one page whose whole point is "show the receipts."
+  const distinctLoggedDays = new Set<string>();
+  for (const r of bodyRows) distinctLoggedDays.add(r.entry_date);
+  for (const r of confRows) distinctLoggedDays.add(r.entry_date);
+  for (const r of spaceRows) distinctLoggedDays.add(r.entry_date);
+  const totalDays = distinctLoggedDays.size;
   const hasEnough = totalDays >= 3;
 
   // ── Body computations ──
@@ -234,7 +242,7 @@ export default function ProfileSection({ userId, onReset, onMasteryReset }: Prof
   const winsWords = topWords(spaceRows.map(r => r.space_wins).filter(Boolean));
 
   // ── Evidence computations (cross-lane) ──
-  const savedDays = Math.max(bodyRows.length, confRows.length, spaceRows.length);
+  const savedDays = totalDays;
   const energyTrend = energyLast7.length >= 2
     ? energyLast7[0] > energyLast7[energyLast7.length - 1] ? 'up'
     : energyLast7[0] < energyLast7[energyLast7.length - 1] ? 'down' : 'steady'
