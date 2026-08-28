@@ -2,14 +2,14 @@ import { useState } from 'react';
 import ProtocolModal from './ProtocolModal';
 import CamrynAvatar from './ui/CamrynAvatar';
 
-export type AppView = 'today' | 'body' | 'food' | 'confidence' | 'space' | 'journal' | 'inspiration' | 'profile';
+export type AppView = 'today' | 'body' | 'food' | 'confidence' | 'space' | 'journal' | 'inspiration' | 'profile' | 'challenges';
 
 // Grouped by the cadence each section claims for itself -- Journal frames
 // itself as a daily wind-down habit, Today is the daily anchor. Everything
 // else explicitly says "no notification, visit whenever it feels right"
 // (Confidence) or "no alarm, no reminder" (Space) in its own copy.
 const DAILY_VIEWS: AppView[] = ['today', 'journal'];
-const WHENEVER_VIEWS: AppView[] = ['profile', 'body', 'food', 'confidence', 'space', 'inspiration'];
+const WHENEVER_VIEWS: AppView[] = ['profile', 'body', 'food', 'confidence', 'space', 'inspiration', 'challenges'];
 
 interface HeaderProps {
   syncDot?: 'synced' | 'saving' | 'idle' | 'error';

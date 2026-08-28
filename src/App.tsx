@@ -17,6 +17,7 @@ import ProfileSection from './components/ProfileSection';
 import BodySection from './components/BodySection';
 import ConfidenceSection from './components/ConfidenceSection';
 import SpaceSection from './components/SpaceSection';
+import ChallengeSection from './components/ChallengeSection';
 import JournalSection from './components/JournalSection';
 import FoodSection from './components/FoodSection';
 import OnboardingFlow from './components/OnboardingFlow';
@@ -116,7 +117,7 @@ function App() {
   };
   const [view, setView] = useState<AppView>(() => {
     const saved = localStorage.getItem('camryn_view');
-    const valid: AppView[] = ['today', 'body', 'food', 'confidence', 'space', 'journal', 'inspiration', 'profile'];
+    const valid: AppView[] = ['today', 'body', 'food', 'confidence', 'space', 'journal', 'inspiration', 'profile', 'challenges'];
     return (saved && valid.includes(saved as AppView)) ? (saved as AppView) : 'today';
   });
   const handleViewChange = (v: AppView) => { setView(v); localStorage.setItem('camryn_view', v); };
@@ -703,6 +704,11 @@ function App() {
           {view === 'space' && (
             <div className="lane-single">
               <SpaceSection userId={user.id} />
+            </div>
+          )}
+          {view === 'challenges' && (
+            <div className="lane-single">
+              <ChallengeSection userId={user.id} />
             </div>
           )}
           {view === 'journal' && (
