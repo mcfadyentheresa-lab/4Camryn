@@ -7,6 +7,7 @@ import CamrynAvatar from './ui/CamrynAvatar';
 import type { PersonalNote } from '../App';
 import { upsertChatTask } from '../services/camrynSyncService';
 import { localToday, formatLocalDate } from '../lib/date';
+import { VITAMINS } from '../lib/constants';
 
 interface JournalEntry {
   id: string;
@@ -318,6 +319,23 @@ interface LogAction {
   [key: string]: any;
 }
 
+// Camryn's chat extraction (camryn-journal edge function) free-labels the
+// supplement name (e.g. "vitamin d", "b complex") -- normalize to the
+// VITAMINS ids that BodySection's checkboxes actually key off, or the log
+// silently writes a name the UI never reads back.
+function normalizeVitaminName(raw: string): string | null {
+  const cleaned = raw.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  const exact = VITAMINS.find((v) => v.id === cleaned);
+  if (exact) return exact.id;
+  if (/vit(amin)?-?d/.test(cleaned)) return 'vitamin-d';
+  if (/omega/.test(cleaned)) return 'omega-3';
+  if (/b-?complex/.test(cleaned)) return 'b-complex';
+  if (/magnesium|^mag$/.test(cleaned)) return 'magnesium';
+  if (/^iron$/.test(cleaned)) return 'iron';
+  if (/^zinc$/.test(cleaned)) return 'zinc';
+  return null;
+}
+
 interface SharedLink {
   url: string;
   label: string;
@@ -381,6 +399,23 @@ async function applyLogActions(userId: string, actions: LogAction[]): Promise<vo
           confidence_note: action.note ?? '',
         }], { onConflict: 'user_id,entry_date', ignoreDuplicates: false });
         if (error) console.error('[journal] auto-log mood upsert failed:', error);
+      } else if (action.type === 'supplement' && action.name) {
+        const vitaminId = normalizeVitaminName(String(action.name));
+        if (!vitaminId) continue;
+        const { data: existing } = await supabase
+          .from('camryn_body')
+          .select('id, vitamins')
+          .eq('user_id', userId)
+          .eq('entry_date', today)
+          .maybeSingle();
+        const vitamins = { ...((existing?.vitamins as Record<string, boolean>) ?? {}), [vitaminId]: true };
+        if (existing) {
+          const { error } = await supabase.from('camryn_body').update({ vitamins }).eq('id', existing.id);
+          if (error) console.error('[journal] auto-log supplement update failed:', error);
+        } else {
+          const { error } = await supabase.from('camryn_body').insert([{ user_id: userId, entry_date: today, vitamins }]);
+          if (error) console.error('[journal] auto-log supplement insert failed:', error);
+        }
       }
     } catch (err) {
       // Never blocks the conversation -- this is best-effort background

@@ -8,6 +8,7 @@ import { localToday } from '../lib/date';
 
 const MEAL_TYPES = ['Breakfast', 'Lunch', 'Dinner', 'Snack'] as const;
 type MealType = (typeof MEAL_TYPES)[number];
+const CANONICAL_MEAL_KEYS = new Set(MEAL_TYPES.map((m) => m.toLowerCase()));
 
 interface FoodEntry {
   id: string;
@@ -104,6 +105,15 @@ function clamp(val: number, min: number, max: number) {
   return Math.max(min, Math.min(max, val));
 }
 
+// Body weight is tracked in lbs everywhere else in the app (BodySection's
+// daily weight field, and real user entries like "185"), but calcMacroTargets'
+// BMR formula needs kg -- convert at the UI boundary rather than changing
+// what's stored, so a user typing their familiar lbs number never gets
+// silently read as kg (185 "kg" would be 408 lbs, wildly inflating targets).
+const KG_PER_LB = 0.45359237;
+const lbsToKg = (lbs: number) => lbs * KG_PER_LB;
+const kgToLbs = (kg: number) => kg / KG_PER_LB;
+
 interface FoodSectionProps {
   userId: string;
   currentPhase?: number;
@@ -116,6 +126,11 @@ export default function FoodSection({ userId, currentPhase = 1, cyclePhase = 'No
   const [summary, setSummary] = useState<DailySummary>(EMPTY_SUMMARY);
   const [profile, setProfile] = useState<FoodProfile>(EMPTY_PROFILE);
   const [profileOpen, setProfileOpen] = useState(false);
+  // Decoupled from profile.weight_kg so typing doesn't round-trip through a
+  // kg<->lbs conversion on every keystroke (which would jitter the displayed
+  // digits mid-type). This is the source of truth for the input; weight_kg
+  // is derived from it on change/blur for storage and macro calculation.
+  const [weightLbsText, setWeightLbsText] = useState('');
   const [draft, setDraft] = useState<AddMealDraft | null>(null);
   const [showScanner, setShowScanner] = useState(false);
   const [saveLabel, startSave, doneSave, failSave] = useSaveIndicator();
@@ -166,6 +181,7 @@ export default function FoodSection({ userId, currentPhase = 1, cyclePhase = 'No
         };
         setProfile(p);
         profilePendingRef.current = p;
+        setWeightLbsText(p.weight_kg != null ? String(Math.round(kgToLbs(p.weight_kg) * 10) / 10) : '');
       }
     };
     load();
@@ -289,9 +305,20 @@ export default function FoodSection({ userId, currentPhase = 1, cyclePhase = 'No
   const hasProfileData = !!(profile.weight_kg && profile.height_cm && profile.age);
 
   const grouped: Record<string, FoodEntry[]> = {};
+  const otherEntries: FoodEntry[] = [];
   for (const e of entries) {
-    if (!grouped[e.meal_type]) grouped[e.meal_type] = [];
-    grouped[e.meal_type].push(e);
+    if (CANONICAL_MEAL_KEYS.has(e.meal_type)) {
+      if (!grouped[e.meal_type]) grouped[e.meal_type] = [];
+      grouped[e.meal_type].push(e);
+    } else {
+      // Camryn's chat auto-logging (JournalSection -> camryn-journal edge
+      // function) lets the AI free-label meal_type ("smoothie", "evening",
+      // "dessert", etc.) with no enum constraint. Anything outside the 4
+      // fixed cards below used to vanish from this screen entirely -- still
+      // counted in the totals above, but unviewable and undeletable. Catch
+      // it here instead of silently dropping it.
+      otherEntries.push(e);
+    }
   }
 
   const mealContext = getMealContext(currentPhase, cyclePhase);
@@ -363,19 +390,22 @@ export default function FoodSection({ userId, currentPhase = 1, cyclePhase = 'No
             </p>
             <div className="food-profile-grid">
               <div className="food-macro-field">
-                <label className="food-macro-field-label">Weight (kg)</label>
+                <label className="food-macro-field-label">Weight (lbs)</label>
                 <input
                   type="number"
-                  min="30" max="200"
+                  min="66" max="440"
                   className="body-input"
-                  value={profile.weight_kg ?? ''}
+                  value={weightLbsText}
                   onChange={(e) => {
-                    const p = { ...profile, weight_kg: e.target.value ? parseFloat(e.target.value) : null };
+                    const raw = e.target.value;
+                    setWeightLbsText(raw);
+                    const lbs = raw !== '' ? parseFloat(raw) : null;
+                    const p = { ...profile, weight_kg: lbs != null && !Number.isNaN(lbs) ? lbsToKg(lbs) : null };
                     setProfile(p);
                     profilePendingRef.current = p;
                   }}
                   onBlur={() => persistProfile(profilePendingRef.current)}
-                  placeholder="e.g. 65"
+                  placeholder="e.g. 145"
                 />
               </div>
               <div className="food-macro-field">
@@ -658,6 +688,46 @@ export default function FoodSection({ userId, currentPhase = 1, cyclePhase = 'No
             </div>
           );
         })}
+
+        {otherEntries.length > 0 && (
+          <div className="food-meal-card">
+            <div className="food-meal-card-header">
+              <div className="food-meal-card-left">
+                <span className="food-meal-card-name">Other</span>
+                {(() => {
+                  const otherCals = otherEntries.reduce((acc, e) => acc + (e.calories ?? 0), 0);
+                  return otherCals > 0 && (
+                    <span className="food-meal-card-kcal">{Math.round(otherCals)} kcal</span>
+                  );
+                })()}
+              </div>
+            </div>
+            {otherEntries.map((entry) => (
+              <div key={entry.id} className="food-entry-item">
+                <div className="food-entry-info">
+                  <div className="food-entry-name">
+                    {entry.description}
+                    {entry.source === 'barcode' && <span className="food-barcode-badge">scanned</span>}
+                  </div>
+                  {entry.brand_name && <div className="food-entry-brand">{entry.brand_name}</div>}
+                  {entry.serving_size && <div className="food-entry-serving">{entry.serving_size}</div>}
+                  <div className="food-entry-macros">
+                    {entry.calories != null && <span>{Math.round(entry.calories)} kcal</span>}
+                    {entry.protein_g != null && <span className="food-macro-protein">{entry.protein_g}g P</span>}
+                    {entry.carbs_g != null && <span className="food-macro-carbs">{entry.carbs_g}g C</span>}
+                    {entry.fat_g != null && <span className="food-macro-fat">{entry.fat_g}g F</span>}
+                  </div>
+                  {entry.notes && <div className="food-entry-note">{entry.notes}</div>}
+                </div>
+                <button
+                  className="food-delete-btn"
+                  onClick={() => handleDeleteEntry(entry.id)}
+                  aria-label="Remove"
+                >✕</button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Water tracker */}

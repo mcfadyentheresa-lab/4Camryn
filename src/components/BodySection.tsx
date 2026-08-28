@@ -385,7 +385,7 @@ export default function BodySection({
 
           <div className="body-field">
             <label className="field-label" htmlFor="body-weight">
-              Weight <span className="body-optional">(optional)</span>
+              Weight (lbs) <span className="body-optional">(optional)</span>
             </label>
             <input
               id="body-weight"
