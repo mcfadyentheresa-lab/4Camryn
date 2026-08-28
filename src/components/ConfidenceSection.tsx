@@ -118,6 +118,12 @@ export default function ConfidenceSection({ userId, onNavigateTo }: ConfidenceSe
   const [rebrandNote, setRebrandNote] = useState('');
   const dailyPending = useRef({ confidence_note: '', rebrand_note: '' });
   const [dailySave, startDailySave, doneDailySave, failDailySave] = useSaveIndicator();
+  // Whether today already counted toward confDays as of the initial fetch --
+  // without this, saving a 6th day after already having 5 would incorrectly
+  // floor back to 1 (Math.max(prevCount, 1)) instead of becoming 6, since
+  // there was no way to tell "first non-empty save today" from "editing an
+  // already-counted day" without tracking the pre-edit state explicitly.
+  const countedTodayRef = useRef(false);
 
   // Profile state
   const [profile, setProfile] = useState<Profile>(EMPTY_PROFILE);
@@ -176,6 +182,7 @@ export default function ConfidenceSection({ userId, onNavigateTo }: ConfidenceSe
         setConfNote(cn);
         setRebrandNote(rn);
         dailyPending.current = { confidence_note: cn, rebrand_note: rn };
+        countedTodayRef.current = !!cn.trim();
       }
 
       if (profileRes.data) {
@@ -222,8 +229,9 @@ export default function ConfidenceSection({ userId, onNavigateTo }: ConfidenceSe
       return;
     }
     doneDailySave();
-    if (dailyPending.current.confidence_note.trim()) {
-      setConfDays(d => Math.max(d, 1));
+    if (dailyPending.current.confidence_note.trim() && !countedTodayRef.current) {
+      countedTodayRef.current = true;
+      setConfDays(d => d + 1);
     }
   };
 

@@ -566,13 +566,17 @@ export default function JournalSection({ userId, session, focusInput, displayNam
 
   const loadEntries = async () => {
     setLoadingEntries(true);
+    // Ordering ascending before limiting would keep the OLDEST 100 entries,
+    // silently cutting off the most recent conversation once history passes
+    // 100 messages. Fetch the newest 100 (descending) and reverse back to
+    // chronological order for display/grouping.
     const { data } = await supabase
       .from('camryn_journal')
       .select('*')
       .eq('user_id', userId)
-      .order('created_at', { ascending: true })
+      .order('created_at', { ascending: false })
       .limit(100);
-    const loaded = (data as JournalEntry[]) ?? [];
+    const loaded = ((data as JournalEntry[]) ?? []).reverse();
     setEntries(loaded);
     if (loaded.length > 0) {
       const ids = loaded.map((e) => e.id);
@@ -1013,7 +1017,7 @@ function PastDayThread({ date, entries }: { date: string; entries: JournalEntry[
                   <CamrynAvatar size={26} className="imsg-bubble-avatar" />
                   <div className="imsg-bubble imsg-bubble--camryn">
                     {entry.camryn_reply.split('\n\n').map((para, pi) => (
-                      <p key={pi}>{stripNumberPrefix(para)}</p>
+                      <p key={pi}>{renderInlineLinks(stripNumberPrefix(para))}</p>
                     ))}
                     <span className="imsg-time">{new Date(entry.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span>
                   </div>
