@@ -8,6 +8,43 @@
 export type ChallengeDomain = 'body' | 'food' | 'space' | 'confidence' | 'journal' | 'cycle' | 'money' | 'general' | 'inspiration' | 'sleep';
 export type ChallengeSeason = 'push' | 'maintenance';
 
+// Reuses the existing phase-color triplets (already proven in the Protocol
+// modal, light and dark) rather than inventing a parallel palette. Domains
+// that never appear as a primaryDomain today (sleep, journal) fall back to
+// neutral so there's nothing to visually tune until they're actually used.
+export interface DomainStyle {
+  label: string;
+  accent: string;
+  soft: string;
+  track: string;
+}
+
+export const DOMAIN_STYLE: Record<ChallengeDomain, DomainStyle> = {
+  body: { label: 'Body', accent: 'var(--phase-3)', soft: 'var(--phase-3-soft)', track: 'var(--phase-3-track)' },
+  food: { label: 'Food', accent: 'var(--phase-2)', soft: 'var(--phase-2-soft)', track: 'var(--phase-2-track)' },
+  confidence: { label: 'Confidence', accent: 'var(--phase-5)', soft: 'var(--phase-5-soft)', track: 'var(--phase-5-track)' },
+  inspiration: { label: 'Inspiration', accent: 'var(--phase-4)', soft: 'var(--phase-4-soft)', track: 'var(--phase-4-track)' },
+  space: { label: 'Space', accent: 'var(--phase-6)', soft: 'var(--phase-6-soft)', track: 'var(--phase-6-track)' },
+  money: { label: 'Money', accent: 'var(--phase-1)', soft: 'var(--phase-1-soft)', track: 'var(--phase-1-track)' },
+  cycle: { label: 'Cycle', accent: 'var(--camryn-cycle-mint)', soft: 'var(--camryn-cycle-mint-bg)', track: 'var(--line)' },
+  general: { label: 'General', accent: 'var(--muted)', soft: 'var(--soft)', track: 'var(--line)' },
+  sleep: { label: 'Sleep', accent: 'var(--muted)', soft: 'var(--soft)', track: 'var(--line)' },
+  journal: { label: 'Journal', accent: 'var(--muted)', soft: 'var(--soft)', track: 'var(--line)' },
+};
+
+// A short, glanceable label for a challenge's shape -- what you're actually
+// signing up for -- without having to open "Show details."
+export function describeCompletionShape(completion: ChallengeCompletion): string {
+  if (completion.type === 'streak') {
+    return completion.durationDays === 1 ? 'One-time' : `${completion.durationDays}-day streak`;
+  }
+  if (completion.type === 'cumulative') {
+    const goal = completion.unit === 'usd' ? `$${completion.target}` : `${completion.target}x`;
+    return completion.windowDays ? goal : `${goal} · open-ended`;
+  }
+  return 'Review & mark';
+}
+
 // tolerance: 'strict' breaks the streak on any missed day (like PHASE_QUESTS
 // mastery quests today). A number is the count of skips allowed across the
 // whole run before it breaks — not a rolling window.

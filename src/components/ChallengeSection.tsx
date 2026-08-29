@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
-import { CHALLENGE_LIBRARY, type ChallengeContent } from '../lib/challenges';
+import { useEffect, useRef, useState } from 'react';
+import { CHALLENGE_LIBRARY, DOMAIN_STYLE, describeCompletionShape, type ChallengeContent, type ChallengeDomain } from '../lib/challenges';
 import { localToday } from '../lib/date';
+import DomainIcon from './ui/DomainIcon';
 import {
   evaluateStreakChallenge,
   evaluateCumulativeChallenge,
@@ -55,6 +56,13 @@ export default function ChallengeSection({ userId }: ChallengeSectionProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyChallengeId, setBusyChallengeId] = useState<string | null>(null);
+  const [domainFilter, setDomainFilter] = useState<ChallengeDomain | 'all'>('all');
+  const [celebration, setCelebration] = useState<{ title: string; domain: ChallengeDomain } | null>(null);
+  const celebrationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (celebrationTimer.current) clearTimeout(celebrationTimer.current);
+  }, []);
 
   const reload = async () => {
     const [activeRows, historyRows] = await Promise.all([fetchActiveInstances(userId), fetchInstanceHistory(userId)]);
@@ -84,6 +92,14 @@ export default function ChallengeSection({ userId }: ChallengeSectionProps) {
     } else {
       setActive((prev) => prev.filter((i) => i.id !== instanceId));
       setHistory((prev) => [updated, ...prev]);
+      if (updated.status === 'completed') {
+        const content = CHALLENGE_LIBRARY.find((c) => c.id === updated.challenge_id);
+        if (content) {
+          if (celebrationTimer.current) clearTimeout(celebrationTimer.current);
+          setCelebration({ title: content.title, domain: content.primaryDomain });
+          celebrationTimer.current = setTimeout(() => setCelebration(null), 2800);
+        }
+      }
     }
   };
 
@@ -101,6 +117,12 @@ export default function ChallengeSection({ userId }: ChallengeSectionProps) {
 
   const completedChallengeIds = new Set(history.filter((i) => i.status === 'completed').map((i) => i.challenge_id));
   const activeChallengeIds = new Set(active.map((i) => i.challenge_id));
+
+  // Only domains that actually appear as a primaryDomain get a chip -- keeps
+  // the row honest as the library grows instead of showing empty filters.
+  const DOMAIN_ORDER: ChallengeDomain[] = ['body', 'food', 'confidence', 'space', 'inspiration', 'money', 'cycle', 'general', 'sleep', 'journal'];
+  const presentDomains = DOMAIN_ORDER.filter((d) => CHALLENGE_LIBRARY.some((c) => c.primaryDomain === d));
+  const libraryChallenges = CHALLENGE_LIBRARY.filter((c) => !activeChallengeIds.has(c.id) && (domainFilter === 'all' || c.primaryDomain === domainFilter));
 
   const handleAccept = (challenge: ChallengeContent, unlockLabel: string) =>
     withBusy(challenge.id, async () => {
@@ -129,6 +151,21 @@ export default function ChallengeSection({ userId }: ChallengeSectionProps) {
 
       {error && <div className="challenge-error">{error}</div>}
 
+      {celebration && (
+        <div className="challenge-celebration" style={{ color: DOMAIN_STYLE[celebration.domain].accent, borderColor: DOMAIN_STYLE[celebration.domain].track }}>
+          <div className="challenge-celebration-burst" aria-hidden>
+            {[...Array(10)].map((_, i) => (
+              <span
+                key={i}
+                className={`challenge-celebration-particle challenge-celebration-p${i}`}
+                style={{ background: DOMAIN_STYLE[celebration.domain].accent }}
+              />
+            ))}
+          </div>
+          <span className="challenge-celebration-text">{celebration.title} complete</span>
+        </div>
+      )}
+
       {active.length > 0 && (
         <div className="challenge-group">
           <div className="challenge-group-label">Active</div>
@@ -156,8 +193,27 @@ export default function ChallengeSection({ userId }: ChallengeSectionProps) {
 
       <div className="challenge-group">
         <div className="challenge-group-label">Library</div>
+        <div className="challenge-filter-row">
+          <button
+            className={`challenge-filter-chip ${domainFilter === 'all' ? 'active' : ''}`}
+            onClick={() => setDomainFilter('all')}
+          >
+            All
+          </button>
+          {presentDomains.map((d) => (
+            <button
+              key={d}
+              className={`challenge-filter-chip ${domainFilter === d ? 'active' : ''}`}
+              style={domainFilter === d ? { background: DOMAIN_STYLE[d].soft, color: DOMAIN_STYLE[d].accent, borderColor: DOMAIN_STYLE[d].track } : undefined}
+              onClick={() => setDomainFilter(d)}
+            >
+              <DomainIcon domain={d} size={13} />
+              {DOMAIN_STYLE[d].label}
+            </button>
+          ))}
+        </div>
         <div className="challenge-grid">
-          {CHALLENGE_LIBRARY.filter((c) => !activeChallengeIds.has(c.id)).map((challenge) => {
+          {libraryChallenges.map((challenge) => {
             const missingPrereqs = (challenge.prerequisites ?? []).filter((id) => !completedChallengeIds.has(id));
             const missingTitles = missingPrereqs
               .map((id) => CHALLENGE_LIBRARY.find((c) => c.id === id)?.title ?? id)
@@ -173,6 +229,9 @@ export default function ChallengeSection({ userId }: ChallengeSectionProps) {
               />
             );
           })}
+          {libraryChallenges.length === 0 && (
+            <p className="challenge-empty-note">Nothing here yet — try a different filter.</p>
+          )}
         </div>
       </div>
 
@@ -210,10 +269,19 @@ function ChallengeLibraryCard({ challenge, locked, lockedReason, busy, onAccept 
   const [expanded, setExpanded] = useState(false);
   const needsRewardLabel = challenge.unlock?.kind === 'reward' && !challenge.unlock.label;
   const [rewardLabel, setRewardLabel] = useState('');
+  const style = DOMAIN_STYLE[challenge.primaryDomain];
 
   return (
-    <div className={`challenge-card ${locked ? 'challenge-card--locked' : ''}`}>
-      <div className="card-title" style={{ marginBottom: '2px' }}>{challenge.title}</div>
+    <div className={`challenge-card ${locked ? 'challenge-card--locked' : ''}`} style={{ borderLeftColor: style.track, borderLeftWidth: 3 }}>
+      <div className="challenge-card-head">
+        <span className="challenge-domain-icon" style={{ color: style.accent }}>
+          <DomainIcon domain={challenge.primaryDomain} />
+        </span>
+        <div className="challenge-card-title">{challenge.title}</div>
+      </div>
+      <span className="challenge-shape-badge" style={{ background: style.soft, color: style.accent }}>
+        {describeCompletionShape(challenge.completion)}
+      </span>
       <p className="card-body">{challenge.why}</p>
 
       {expanded && (
@@ -294,10 +362,15 @@ function ActiveChallengeCard({ userId, instance, content, detail, busy, onChange
       onChange(updated);
     });
 
+  const style = DOMAIN_STYLE[content.primaryDomain];
+
   return (
     <div className="challenge-card challenge-card--active">
       <div className="challenge-active-head">
-        <div className="card-title" style={{ marginBottom: 0 }}>{content.title}</div>
+        <span className="challenge-domain-icon" style={{ color: style.accent }}>
+          <DomainIcon domain={content.primaryDomain} />
+        </span>
+        <div className="challenge-card-title" style={{ flex: 1 }}>{content.title}</div>
         {isPaused && <span className="challenge-paused-pill">Paused</span>}
       </div>
 
