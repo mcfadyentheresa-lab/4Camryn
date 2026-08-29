@@ -140,7 +140,9 @@ export async function startChallenge(
     params.durationDays = challenge.completion.durationDays;
     params.tolerance = challenge.completion.tolerance;
   } else if (challenge.completion.type === 'cumulative') {
-    windowEndsDate = addLocalDays(acceptedDate, challenge.completion.windowDays - 1);
+    windowEndsDate = challenge.completion.windowDays != null
+      ? addLocalDays(acceptedDate, challenge.completion.windowDays - 1)
+      : null;
     params.target = challenge.completion.target;
     params.unit = challenge.completion.unit;
   } else {

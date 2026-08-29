@@ -399,7 +399,7 @@ function MoneyProgress({ instance, detail, busy, isPaused, onChange, onDetailCha
   const evaluation = evaluateCumulativeChallenge(
     detail.moneyEntries.map((e) => Number(e.amount)),
     params.target,
-    instance.window_ends_date ?? localToday(),
+    instance.window_ends_date,
   );
 
   const handleAdd = () =>

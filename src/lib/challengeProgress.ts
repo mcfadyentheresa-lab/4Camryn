@@ -64,7 +64,7 @@ export interface CumulativeEvaluation {
 export function evaluateCumulativeChallenge(
   entryAmounts: number[],
   target: number,
-  windowEndsDate: string,
+  windowEndsDate: string | null,
   asOfDate: string = localToday(),
 ): CumulativeEvaluation {
   const total = entryAmounts.reduce((sum, a) => sum + a, 0);
@@ -73,9 +73,11 @@ export function evaluateCumulativeChallenge(
     total,
     progressPct: Math.min(100, Math.round((total / target) * 100)),
     isComplete,
-    // Expired only matters if it hasn't already succeeded -- hitting the
-    // target on the last possible day is still a completion, not a miss.
-    isExpired: !isComplete && asOfDate > windowEndsDate,
+    // Expired only matters if it hasn't already succeeded (hitting the
+    // target on the last possible day is still a completion, not a miss)
+    // and the challenge actually has a window -- an open-ended one (e.g.
+    // "100 Club") never expires.
+    isExpired: !isComplete && windowEndsDate !== null && asOfDate > windowEndsDate,
   };
 }
 
