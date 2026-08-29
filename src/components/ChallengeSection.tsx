@@ -6,6 +6,8 @@ import {
   evaluateStreakChallenge,
   evaluateCumulativeChallenge,
   evaluateAuditChallenge,
+  getFeaturedChallenges,
+  type FeaturedRecommendation,
 } from '../lib/challengeProgress';
 import {
   fetchActiveInstances,
@@ -57,6 +59,7 @@ export default function ChallengeSection({ userId }: ChallengeSectionProps) {
   const [error, setError] = useState<string | null>(null);
   const [busyChallengeId, setBusyChallengeId] = useState<string | null>(null);
   const [domainFilter, setDomainFilter] = useState<ChallengeDomain | 'all'>('all');
+  const [featuredIndex, setFeaturedIndex] = useState(0);
   const [celebration, setCelebration] = useState<{ title: string; domain: ChallengeDomain } | null>(null);
   const celebrationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -124,11 +127,15 @@ export default function ChallengeSection({ userId }: ChallengeSectionProps) {
   const presentDomains = DOMAIN_ORDER.filter((d) => CHALLENGE_LIBRARY.some((c) => c.primaryDomain === d));
   const libraryChallenges = CHALLENGE_LIBRARY.filter((c) => !activeChallengeIds.has(c.id) && (domainFilter === 'all' || c.primaryDomain === domainFilter));
 
+  const featured = getFeaturedChallenges(active.map((i) => i.challenge_id), history);
+  const currentFeatured = featured.length > 0 ? featured[featuredIndex % featured.length] : null;
+
   const handleAccept = (challenge: ChallengeContent, unlockLabel: string) =>
     withBusy(challenge.id, async () => {
       const instance = await startChallenge(userId, challenge, { unlockLabel: unlockLabel || undefined });
       setActive((prev) => [...prev, instance]);
       setDetails((prev) => ({ ...prev, [instance.id]: EMPTY_DETAIL }));
+      setFeaturedIndex(0);
     });
 
   if (loading) {
@@ -164,6 +171,16 @@ export default function ChallengeSection({ userId }: ChallengeSectionProps) {
           </div>
           <span className="challenge-celebration-text">{celebration.title} complete</span>
         </div>
+      )}
+
+      {currentFeatured && (
+        <FeaturedChallengeCard
+          recommendation={currentFeatured}
+          hasMore={featured.length > 1}
+          busy={busyChallengeId === currentFeatured.challenge.id}
+          onAccept={(unlockLabel) => handleAccept(currentFeatured.challenge, unlockLabel)}
+          onShuffle={() => setFeaturedIndex((i) => i + 1)}
+        />
       )}
 
       {active.length > 0 && (
@@ -252,6 +269,61 @@ export default function ChallengeSection({ userId }: ChallengeSectionProps) {
         </div>
       )}
     </section>
+  );
+}
+
+// ── Featured slot (recommendation, see getFeaturedChallenges) ────────────
+
+interface FeaturedChallengeCardProps {
+  recommendation: FeaturedRecommendation;
+  hasMore: boolean;
+  busy: boolean;
+  onAccept: (unlockLabel: string) => void;
+  onShuffle: () => void;
+}
+
+function FeaturedChallengeCard({ recommendation, hasMore, busy, onAccept, onShuffle }: FeaturedChallengeCardProps) {
+  const { challenge, reason } = recommendation;
+  const style = DOMAIN_STYLE[challenge.primaryDomain];
+  const needsRewardLabel = challenge.unlock?.kind === 'reward' && !challenge.unlock.label;
+  const [rewardLabel, setRewardLabel] = useState('');
+
+  return (
+    <div
+      className="challenge-featured"
+      style={{ background: `color-mix(in srgb, ${style.accent} 7%, var(--paper))`, borderColor: style.track }}
+    >
+      <div className="challenge-featured-eyebrow" style={{ color: style.accent }}>
+        <DomainIcon domain={challenge.primaryDomain} size={13} />
+        Picked for you
+      </div>
+      <div className="challenge-featured-title">{challenge.title}</div>
+      <p className="challenge-featured-reason">{reason}</p>
+      <p className="card-body">{challenge.why}</p>
+
+      <div className="challenge-accept-row">
+        {needsRewardLabel && (
+          <input
+            className="challenge-reward-input"
+            placeholder="What are you working toward?"
+            value={rewardLabel}
+            onChange={(e) => setRewardLabel(e.target.value)}
+          />
+        )}
+        <button
+          className="challenge-btn-primary"
+          disabled={busy || (needsRewardLabel && !rewardLabel.trim())}
+          onClick={() => onAccept(rewardLabel.trim())}
+        >
+          {busy ? 'Starting…' : 'Accept challenge'}
+        </button>
+        {hasMore && (
+          <button className="challenge-link-btn" onClick={onShuffle}>
+            Try something else
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 

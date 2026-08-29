@@ -9076,6 +9076,37 @@ div[data-night='true'] {
 .challenge-celebration-p8 { --bx: 10px;  --by: -40px; animation-delay: 80ms; }
 .challenge-celebration-p9 { --bx: -10px; --by: 40px;  animation-delay: 40ms; }
 
+.challenge-featured {
+  border: 1.5px solid;
+  border-radius: var(--r);
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.challenge-featured-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.71rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.challenge-featured-title {
+  font: 700 1.35rem / 1.3 var(--font-display);
+  color: var(--ink);
+}
+
+.challenge-featured-reason {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--ink-2);
+  margin: 0;
+}
+
 @media (max-width: 640px) {
   .challenge-grid { grid-template-columns: 1fr; }
 }
