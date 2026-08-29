@@ -391,7 +391,8 @@ function StreakProgress({ instance, detail, busy, isPaused, onChange, onDetailCh
 }
 
 function MoneyProgress({ instance, detail, busy, isPaused, onChange, onDetailChange, withBusy, userId }: ProgressSubProps & { isPaused: boolean; onDetailChange: (d: InstanceDetail) => void }) {
-  const params = instance.params as { target: number };
+  const params = instance.params as { target: number; unit: 'usd' | 'items' };
+  const isUsd = params.unit !== 'items';
   const [source, setSource] = useState('');
   const [amount, setAmount] = useState('');
   const [recurring, setRecurring] = useState(false);
@@ -403,9 +404,9 @@ function MoneyProgress({ instance, detail, busy, isPaused, onChange, onDetailCha
 
   const handleAdd = () =>
     withBusy(instance.challenge_id, async () => {
-      const amt = Number(amount);
+      const amt = isUsd ? Number(amount) : 1;
       if (!source.trim() || !(amt > 0)) return;
-      const result = await logMoneyEntry(userId, instance, { source: source.trim(), amount: amt, recurring });
+      const result = await logMoneyEntry(userId, instance, { source: source.trim(), amount: amt, recurring: isUsd && recurring });
       onChange(result.instance);
       onDetailChange({ ...detail, moneyEntries: await fetchMoneyEntries(instance.id) });
       setSource('');
@@ -425,7 +426,7 @@ function MoneyProgress({ instance, detail, busy, isPaused, onChange, onDetailCha
         <div className="progress-bar-fill" style={{ width: `${evaluation.progressPct}%` }} />
       </div>
       <div className="progress-text">
-        ${evaluation.total.toFixed(2)} / ${params.target.toFixed(2)}
+        {isUsd ? `$${evaluation.total.toFixed(2)} / $${params.target.toFixed(2)}` : `${evaluation.total} / ${params.target}`}
         {evaluation.isExpired && ' · window expired'}
       </div>
 
@@ -434,7 +435,7 @@ function MoneyProgress({ instance, detail, busy, isPaused, onChange, onDetailCha
           {detail.moneyEntries.map((e) => (
             <div key={e.id} className="challenge-entry-row">
               <span>{e.source}{e.recurring ? ' (recurring)' : ''}</span>
-              <span className="challenge-entry-amount">${Number(e.amount).toFixed(2)}</span>
+              {isUsd && <span className="challenge-entry-amount">${Number(e.amount).toFixed(2)}</span>}
               <button className="challenge-entry-remove" disabled={busy} onClick={() => handleRemove(e.id)} aria-label="Remove entry">×</button>
             </div>
           ))}
@@ -443,12 +444,21 @@ function MoneyProgress({ instance, detail, busy, isPaused, onChange, onDetailCha
 
       {!isPaused && (
         <div className="challenge-form-row">
-          <input className="challenge-input" placeholder="Source (e.g. sold bike)" value={source} onChange={(e) => setSource(e.target.value)} />
-          <input className="challenge-input challenge-input--amount" type="number" min="0" step="0.01" placeholder="$" value={amount} onChange={(e) => setAmount(e.target.value)} />
-          <label className="challenge-checkbox-label">
-            <input type="checkbox" checked={recurring} onChange={(e) => setRecurring(e.target.checked)} />
-            Recurring
-          </label>
+          <input
+            className="challenge-input"
+            placeholder={isUsd ? 'Source (e.g. sold bike)' : 'What did you log (e.g. Tuesday session)'}
+            value={source}
+            onChange={(e) => setSource(e.target.value)}
+          />
+          {isUsd && (
+            <input className="challenge-input challenge-input--amount" type="number" min="0" step="0.01" placeholder="$" value={amount} onChange={(e) => setAmount(e.target.value)} />
+          )}
+          {isUsd && (
+            <label className="challenge-checkbox-label">
+              <input type="checkbox" checked={recurring} onChange={(e) => setRecurring(e.target.checked)} />
+              Recurring
+            </label>
+          )}
           <button className="challenge-btn-primary" disabled={busy} onClick={handleAdd}>Add</button>
         </div>
       )}
