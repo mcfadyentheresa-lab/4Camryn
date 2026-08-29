@@ -4,7 +4,11 @@ import { localToday, formatLocalDate } from '../lib/date';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const VITALS_ENDPOINT = `${SUPABASE_URL}/functions/v1/camryn-vitals`;
-const VITALS_SECRET = import.meta.env.VITE_CAMRYN_VITALS_SECRET as string | undefined;
+// Deliberately NOT read from a VITE_-prefixed env var here -- Vite bundles
+// every VITE_* variable into the public client JS, so a "secret" sourced
+// that way would ship in plain text to anyone who fetches the deployed
+// bundle, no login required. The Shortcut setup instructions below send
+// the user to fetch it once from the Supabase dashboard instead.
 
 interface VitalsRow {
   entry_date: string;
@@ -64,7 +68,7 @@ const SHORTCUT_STEPS = [
   'Add another "Get Health Samples" action. Set type to "Sleep Analysis". Date range "Last night". Get total.',
   'Add another "Get Health Samples" action. Set type to "Step Count". Date range "Yesterday". Get sum.',
   'Add a "Dictionary" action. Set keys: date (use "Formatted Date" with format YYYY-MM-dd, date "Yesterday"), hrv_ms (from step 3), resting_hr (from step 4), sleep_hours (from step 5 ÷ 3600), steps (from step 6).',
-  'Add a "Get Contents of URL" action. Set URL to your Camryn vitals endpoint. Method POST. Request Body: JSON. Pass the Dictionary from step 7. Under Headers, add one: key "x-camryn-vitals-secret", value is your vitals secret below.',
+  'Add a "Get Contents of URL" action. Set URL to your Camryn vitals endpoint. Method POST. Request Body: JSON. Pass the Dictionary from step 7. Under Headers, add one: key "x-camryn-vitals-secret", value is the CAMRYN_VITALS_SECRET value from your Supabase project’s Edge Functions → Secrets page.',
   'Name the shortcut "Camryn Morning Sync".',
   'Tap the shortcut info icon (i), enable "Add to Home Screen" and set it to run automatically at 7:00 AM using Automation.',
 ];
@@ -80,9 +84,9 @@ export default function VitalsCard({ userId }: VitalsCardProps) {
   const [hrv7avg, setHrv7avg] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [setupOpen, setSetupOpen] = useState(false);
-  const [copied, setCopied] = useState<'secret' | 'url' | null>(null);
+  const [copied, setCopied] = useState<'url' | null>(null);
 
-  const copyToClipboard = (text: string, key: 'secret' | 'url') => {
+  const copyToClipboard = (text: string, key: 'url') => {
     navigator.clipboard.writeText(text).then(() => {
       setCopied(key);
       setTimeout(() => setCopied(null), 1800);
@@ -202,26 +206,8 @@ export default function VitalsCard({ userId }: VitalsCardProps) {
                     </button>
                   </div>
                 </div>
-                {VITALS_SECRET ? (
-                  <div className="vitals-copy-row">
-                    <span className="vitals-copy-label">Vitals secret (header value)</span>
-                    <div className="vitals-copy-value-wrap">
-                      <code className="vitals-copy-value">{VITALS_SECRET}</code>
-                      <button
-                        className="vitals-copy-btn"
-                        onClick={() => copyToClipboard(VITALS_SECRET, 'secret')}
-                      >
-                        {copied === 'secret' ? 'Copied' : 'Copy'}
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="vitals-shortcut-note">
-                    Vitals secret isn't configured in this environment yet — the Shortcut won't be able to sync until it is.
-                  </p>
-                )}
                 <p className="vitals-shortcut-note">
-                  Paste the URL into step 8, and add the secret as the "x-camryn-vitals-secret" header value in that same step. Keep the secret private — it's what gives the Shortcut write access to your data.
+                  Paste the URL into step 8. For the secret header value, open your Supabase project → Edge Functions → Secrets, and copy the value of <code>CAMRYN_VITALS_SECRET</code> from there directly — it's kept out of the app itself so it never ends up somewhere a browser could read it back out. Keep it private; it's what gives the Shortcut write access to your data.
                 </p>
               </div>
             </div>
@@ -234,11 +220,11 @@ export default function VitalsCard({ userId }: VitalsCardProps) {
             <p className="vitals-calibration-detail">{stageInfo.detail}</p>
           )}
 
-          {daysLogged < 14 && (
+          {daysLogged < 28 && (
             <div className="vitals-progress-track">
               <div
                 className="vitals-progress-fill"
-                style={{ width: `${Math.min((daysLogged / 14) * 100, 100)}%` }}
+                style={{ width: `${Math.min((daysLogged / (daysLogged < 14 ? 14 : 28)) * 100, 100)}%` }}
               />
             </div>
           )}
