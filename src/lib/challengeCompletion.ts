@@ -145,7 +145,9 @@ export async function startChallenge(
     params.unit = challenge.completion.unit;
   } else {
     params.reviewUnit = challenge.completion.reviewUnit;
+    params.itemLabel = challenge.completion.itemLabel;
     params.markField = challenge.completion.markField;
+    params.hasCost = challenge.completion.hasCost;
   }
 
   if (challenge.unlock?.kind === 'reward') {

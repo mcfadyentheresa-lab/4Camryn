@@ -36,8 +36,13 @@ export interface CumulativeCompletion {
 export interface AuditCompletion {
   type: 'audit';
   reviewUnit: string;
+  itemLabel: string;
   markField: string;
   markFieldLabel: string;
+  // Whether items carry a $/mo cost worth summing into a found-money total
+  // (Subscription Audit) vs. a plain reviewable list with no dollar value
+  // (Closet Audit). Controls whether the cost input and total even render.
+  hasCost: boolean;
 }
 
 export type ChallengeCompletion = StreakCompletion | CumulativeCompletion | AuditCompletion;
@@ -92,8 +97,10 @@ export const CHALLENGE_LIBRARY: ChallengeContent[] = [
     completion: {
       type: 'audit',
       reviewUnit: 'subscription',
+      itemLabel: 'Subscription name',
       markField: 'usedRecently',
       markFieldLabel: 'Used in the last 30 days',
+      hasCost: true,
     },
   },
   {
@@ -208,6 +215,44 @@ export const CHALLENGE_LIBRARY: ChallengeContent[] = [
       unit: 'items',
       windowDays: 84,
       entryLog: true,
+    },
+  },
+  {
+    id: 'steps-10k-10-days',
+    domain: 'body',
+    season: 'push',
+    title: '10,000 Steps, 10 Days',
+    why: 'Walking is already the highest-leverage low-effort tool in Phase 2 — this turns it into a visible short block instead of a background habit.',
+    what: 'Hit 10,000 steps for 10 days.',
+    rules: [
+      'Track however you already do — phone, watch, pedometer. The requirement is the number, not the device.',
+    ],
+    outcome: 'Unlocks a "movement baseline" comparing your logged energy scores on walk days vs. not.',
+    completion: {
+      type: 'streak',
+      durationDays: 10,
+      tolerance: 2,
+    },
+  },
+  {
+    id: 'closet-audit',
+    domain: 'space',
+    season: 'push',
+    title: 'Closet Audit',
+    why: "Same principle as the subscription audit, applied to physical space — most clutter is stuff you already decided you don't need, you just haven't looked at it directly yet.",
+    what: 'List your clothing, or just one category — one drawer, one shelf. For each item, mark whether you\'ve worn it in the last 90 days.',
+    rules: [
+      "Self-reported — no need to physically sort everything first, just look and mark honestly.",
+      "One category or one space is enough. This doesn't need to be your whole wardrobe.",
+    ],
+    outcome: "A concrete list of what to actually let go of, instead of vague guilt about \"too much stuff.\"",
+    completion: {
+      type: 'audit',
+      reviewUnit: 'item',
+      itemLabel: 'Clothing item',
+      markField: 'usedRecently',
+      markFieldLabel: 'Worn in the last 90 days',
+      hasCost: false,
     },
   },
 ];

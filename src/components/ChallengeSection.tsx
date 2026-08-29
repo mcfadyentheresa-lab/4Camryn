@@ -467,6 +467,9 @@ function MoneyProgress({ instance, detail, busy, isPaused, onChange, onDetailCha
 }
 
 function AuditProgress({ instance, detail, busy, onChange, onDetailChange, withBusy, userId }: ProgressSubProps & { onDetailChange: (d: InstanceDetail) => void }) {
+  const params = instance.params as { itemLabel?: string; hasCost?: boolean };
+  const itemLabel = params.itemLabel ?? 'Item';
+  const hasCost = params.hasCost ?? false;
   const [label, setLabel] = useState('');
   const [cost, setCost] = useState('');
   const evaluation = evaluateAuditChallenge(
@@ -476,7 +479,7 @@ function AuditProgress({ instance, detail, busy, onChange, onDetailChange, withB
   const handleAddItem = () =>
     withBusy(instance.challenge_id, async () => {
       if (!label.trim()) return;
-      const item = await addAuditItem(userId, instance.id, label.trim(), cost ? Number(cost) : undefined);
+      const item = await addAuditItem(userId, instance.id, label.trim(), hasCost && cost ? Number(cost) : undefined);
       onDetailChange({ ...detail, auditItems: [...detail.auditItems, item] });
       setLabel('');
       setCost('');
@@ -492,7 +495,7 @@ function AuditProgress({ instance, detail, busy, onChange, onDetailChange, withB
   return (
     <div className="challenge-progress-block">
       <div className="progress-text">{evaluation.reviewedCount} / {evaluation.totalCount || 0} reviewed</div>
-      {evaluation.totalCount > 0 && evaluation.foundMonthlyTotal > 0 && (
+      {hasCost && evaluation.totalCount > 0 && evaluation.foundMonthlyTotal > 0 && (
         <div className="challenge-found-money">${evaluation.foundMonthlyTotal.toFixed(2)}/mo found so far</div>
       )}
 
@@ -501,7 +504,7 @@ function AuditProgress({ instance, detail, busy, onChange, onDetailChange, withB
           {detail.auditItems.map((item) => (
             <div key={item.id} className="challenge-audit-row">
               <span className="challenge-audit-label">
-                {item.label}{item.monthly_cost != null ? ` — $${Number(item.monthly_cost).toFixed(2)}/mo` : ''}
+                {item.label}{hasCost && item.monthly_cost != null ? ` — $${Number(item.monthly_cost).toFixed(2)}/mo` : ''}
               </span>
               <div className="challenge-audit-actions">
                 <button
@@ -525,8 +528,10 @@ function AuditProgress({ instance, detail, busy, onChange, onDetailChange, withB
       )}
 
       <div className="challenge-form-row">
-        <input className="challenge-input" placeholder="Subscription name" value={label} onChange={(e) => setLabel(e.target.value)} />
-        <input className="challenge-input challenge-input--amount" type="number" min="0" step="0.01" placeholder="$/mo" value={cost} onChange={(e) => setCost(e.target.value)} />
+        <input className="challenge-input" placeholder={itemLabel} value={label} onChange={(e) => setLabel(e.target.value)} />
+        {hasCost && (
+          <input className="challenge-input challenge-input--amount" type="number" min="0" step="0.01" placeholder="$/mo" value={cost} onChange={(e) => setCost(e.target.value)} />
+        )}
         <button className="challenge-btn-primary" disabled={busy} onClick={handleAddItem}>Add</button>
       </div>
     </div>
