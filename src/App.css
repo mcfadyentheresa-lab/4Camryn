@@ -7388,6 +7388,9 @@ button.camryn-orb:focus-visible .camryn-orb-sphere {
 .ob-phase-pill--1 { background: var(--phase-1-soft); color: var(--phase-1); border: 1px solid var(--phase-1-track); }
 .ob-phase-pill--2 { background: var(--phase-2-soft); color: var(--phase-2); border: 1px solid var(--phase-2-track); }
 .ob-phase-pill--3 { background: var(--phase-3-soft); color: var(--phase-3); border: 1px solid var(--phase-3-track); }
+.ob-phase-pill--4 { background: var(--phase-4-soft); color: var(--phase-4); border: 1px solid var(--phase-4-track); }
+.ob-phase-pill--5 { background: var(--phase-5-soft); color: var(--phase-5); border: 1px solid var(--phase-5-track); }
+.ob-phase-pill--6 { background: var(--phase-6-soft); color: var(--phase-6); border: 1px solid var(--phase-6-track); }
 .ob-phase-pill--maintain { background: var(--soft); color: var(--muted); border: 1px solid var(--line); }
 
 .ob-phase-row-text {

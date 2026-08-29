@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import CamrynOrb from './ui/CamrynOrb';
 import { localToday } from '../lib/date';
+import { PROTOCOL } from '../lib/protocol';
 
 const CYCLE_PHASES = [
   { name: 'Menstruation', emoji: '🌑', desc: 'Days 1–6 · Rest, nourishment, gentle movement' },
@@ -350,37 +351,18 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
               {name.trim() ? `Welcome, ${name.trim()}.` : "You're all set."}
             </h2>
             <p className="ob-body">
-              This is a <strong>52-week commitment</strong> — three phases that build on each other. You don't need to be perfect. You need to show up most days and let the protocol do its work.
+              This is a <strong>52-week commitment</strong> — six phases that build on each other. You don't need to be perfect. You need to show up most days and let the protocol do its work.
             </p>
             <div className="ob-phase-preview">
-              <div className="ob-phase-row">
-                <div className="ob-phase-pill ob-phase-pill--1">Phase 1</div>
-                <div className="ob-phase-row-text">
-                  <strong>Foundation</strong> — weeks 1–6
-                  <span className="ob-phase-row-sub">Sleep, hydration, gut health</span>
+              {PROTOCOL.phases.map((p) => (
+                <div key={p.id} className="ob-phase-row">
+                  <div className={`ob-phase-pill ob-phase-pill--${p.id}`}>Phase {p.id}</div>
+                  <div className="ob-phase-row-text">
+                    <strong>{p.name}</strong> — weeks {p.weeks}
+                    <span className="ob-phase-row-sub">{p.focus}</span>
+                  </div>
                 </div>
-              </div>
-              <div className="ob-phase-row">
-                <div className="ob-phase-pill ob-phase-pill--2">Phase 2</div>
-                <div className="ob-phase-row-text">
-                  <strong>Ignition</strong> — weeks 7–12
-                  <span className="ob-phase-row-sub">Nutrition, movement, skin & hair</span>
-                </div>
-              </div>
-              <div className="ob-phase-row">
-                <div className="ob-phase-pill ob-phase-pill--3">Phase 3</div>
-                <div className="ob-phase-row-text">
-                  <strong>Build</strong> — weeks 13–22
-                  <span className="ob-phase-row-sub">Body composition, hormones, longevity</span>
-                </div>
-              </div>
-              <div className="ob-phase-row ob-phase-row--maintain">
-                <div className="ob-phase-pill ob-phase-pill--maintain">Year 1+</div>
-                <div className="ob-phase-row-text">
-                  <strong>Maintain & deepen</strong> — weeks 23–52
-                  <span className="ob-phase-row-sub">Your new standard, sustained for life</span>
-                </div>
-              </div>
+              ))}
             </div>
             <p className="ob-body ob-body--soft">
               You're starting today. Week 1 of 52.
