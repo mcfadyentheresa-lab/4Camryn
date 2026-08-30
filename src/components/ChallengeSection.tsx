@@ -28,8 +28,9 @@ import {
   type MoneyEntryRow,
   type AuditItemRow,
 } from '../lib/challengeCompletion';
+import ResistanceSupportModal from './ResistanceSupportModal';
 
-interface InstanceDetail {
+export interface InstanceDetail {
   streakDays: string[];
   moneyEntries: MoneyEntryRow[];
   auditItems: AuditItemRow[];
@@ -49,9 +50,10 @@ async function loadDetail(instance: ChallengeInstanceRow): Promise<InstanceDetai
 
 interface ChallengeSectionProps {
   userId: string;
+  energyLevel?: string;
 }
 
-export default function ChallengeSection({ userId }: ChallengeSectionProps) {
+export default function ChallengeSection({ userId, energyLevel }: ChallengeSectionProps) {
   const [active, setActive] = useState<ChallengeInstanceRow[]>([]);
   const [history, setHistory] = useState<ChallengeInstanceRow[]>([]);
   const [details, setDetails] = useState<Record<string, InstanceDetail>>({});
@@ -201,6 +203,7 @@ export default function ChallengeSection({ userId }: ChallengeSectionProps) {
                   onChange={(updated) => refreshInstance(updated, instance.id)}
                   onDetailChange={(detail) => setDetails((prev) => ({ ...prev, [instance.id]: detail }))}
                   withBusy={withBusy}
+                  energyLevel={energyLevel}
                 />
               );
             })}
@@ -417,10 +420,13 @@ interface ActiveChallengeCardProps {
   onChange: (updated: ChallengeInstanceRow | null) => void;
   onDetailChange: (detail: InstanceDetail) => void;
   withBusy: (id: string, fn: () => Promise<void>) => Promise<void>;
+  energyLevel?: string;
 }
 
-function ActiveChallengeCard({ userId, instance, content, detail, busy, onChange, onDetailChange, withBusy }: ActiveChallengeCardProps) {
+function ActiveChallengeCard({ userId, instance, content, detail, busy, onChange, onDetailChange, withBusy, energyLevel }: ActiveChallengeCardProps) {
   const isPaused = instance.status === 'paused';
+  const [showResistance, setShowResistance] = useState(false);
+  const isResistanceAware = content.primaryDomain === 'body' || content.primaryDomain === 'food';
 
   const handlePauseToggle = () =>
     withBusy(content.id, async () => {
@@ -491,7 +497,25 @@ function ActiveChallengeCard({ userId, instance, content, detail, busy, onChange
         <button className="challenge-link-btn challenge-link-btn--danger" disabled={busy} onClick={handleAbandon}>
           Abandon
         </button>
+        {isResistanceAware && !isPaused && (
+          <button className="challenge-link-btn challenge-resistance-trigger" disabled={busy} onClick={() => setShowResistance(true)}>
+            Having trouble starting?
+          </button>
+        )}
       </div>
+
+      {showResistance && (
+        <ResistanceSupportModal
+          userId={userId}
+          instance={instance}
+          content={content}
+          detail={detail}
+          energyLevel={energyLevel}
+          onChange={onChange}
+          onDetailChange={onDetailChange}
+          onClose={() => setShowResistance(false)}
+        />
+      )}
     </div>
   );
 }

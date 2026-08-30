@@ -708,7 +708,7 @@ function App() {
           )}
           {view === 'challenges' && (
             <div className="lane-single">
-              <ChallengeSection userId={user.id} />
+              <ChallengeSection userId={user.id} energyLevel={session.energy} />
             </div>
           )}
           {view === 'journal' && (

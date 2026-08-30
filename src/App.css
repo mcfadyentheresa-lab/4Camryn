@@ -9111,6 +9111,67 @@ div[data-night='true'] {
   margin: 0;
 }
 
+.challenge-resistance-trigger {
+  color: var(--muted);
+}
+
+/* ── Resistance support modal ─────────────────────────────────────────── */
+
+.resistance-chip-suggested {
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+}
+
+.resistance-reality-check {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--ink-2);
+  background: var(--soft);
+  border-radius: var(--r-sm);
+  padding: 10px 14px;
+  margin: 0;
+}
+
+.resistance-offer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.resistance-offer-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+  background: var(--soft);
+  border: 1.5px solid var(--line);
+  border-radius: var(--r-sm);
+  padding: 12px 14px;
+  transition: border-color 0.14s, background 0.14s;
+}
+
+.resistance-offer-card:hover {
+  border-color: var(--accent);
+}
+
+.resistance-offer-label {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.resistance-offer-prompt {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.resistance-timer {
+  font: 700 2.2rem / 1 var(--font-display);
+  color: var(--accent);
+  letter-spacing: 0.02em;
+}
+
 @media (max-width: 640px) {
   .challenge-grid { grid-template-columns: 1fr; }
 }

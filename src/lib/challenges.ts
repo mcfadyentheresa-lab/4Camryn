@@ -176,6 +176,7 @@ export const CHALLENGE_LIBRARY: ChallengeContent[] = [
   {
     id: 'sleep-non-negotiable',
     primaryDomain: 'body',
+    secondaryTags: ['sleep'],
     season: 'push',
     title: '7-Day Sleep Non-Negotiable',
     why: "Phase 1's whole thesis is that sleep is infrastructure — this is a compressed proof of that, not a replacement for the full 6 weeks.",

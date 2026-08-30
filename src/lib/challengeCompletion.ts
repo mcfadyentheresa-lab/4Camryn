@@ -397,3 +397,107 @@ export async function completeChallengeInstance(
   if (error) throw error;
   return (data as ChallengeInstanceRow | null) ?? null;
 }
+
+// ── Resistance support (Food/Body challenges) ─────────────────────────────
+
+export interface ResistanceEventRow {
+  id: string;
+  instance_id: string;
+  challenge_domain: string;
+  resistance_type: string;
+  intervention_offered: string[];
+  intervention_selected: string | null;
+  started: boolean | null;
+  completed_full: boolean | null;
+  completed_reduced: boolean | null;
+  continued_past_minimum: boolean | null;
+  felt_afterward: string | null;
+  occurred_date: string;
+  created_at: string;
+}
+
+// This instance's own resistance history -- used for the Minimum Viable
+// Win cap (getMvwCap/getMvwUsageCount in challengeProgress.ts), which is
+// deliberately scoped per instance, not per user.
+export async function fetchResistanceEvents(instanceId: string): Promise<ResistanceEventRow[]> {
+  const { data, error } = await db
+    .from('camryn_challenge_resistance_events')
+    .select('*')
+    .eq('instance_id', instanceId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as ResistanceEventRow[];
+}
+
+// All of this user's resistance events, across every instance -- used for
+// getInterventionStats/getRankedInterventions, since "what actually works
+// for her" is a personal pattern, not scoped to one challenge run.
+export async function fetchUserResistanceEvents(userId: string): Promise<ResistanceEventRow[]> {
+  const { data, error } = await db
+    .from('camryn_challenge_resistance_events')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as ResistanceEventRow[];
+}
+
+export interface LogResistanceEventParams {
+  userId: string;
+  instanceId: string;
+  challengeDomain: string;
+  resistanceType: string;
+  interventionOffered: string[];
+}
+
+// Written the moment a resistance type is chosen -- not at the end of the
+// flow -- so closing the modal early still preserves the classification
+// instead of silently losing that data point. updateResistanceOutcome
+// fills in the rest as the flow resolves.
+export async function logResistanceEvent(params: LogResistanceEventParams): Promise<ResistanceEventRow> {
+  const { userId, instanceId, challengeDomain, resistanceType, interventionOffered } = params;
+  const { data, error } = await db
+    .from('camryn_challenge_resistance_events')
+    .insert([{
+      instance_id: instanceId,
+      user_id: userId,
+      challenge_domain: challengeDomain,
+      resistance_type: resistanceType,
+      intervention_offered: interventionOffered,
+      occurred_date: localToday(),
+    }])
+    .select()
+    .single();
+  if (error) throw error;
+  return data as ResistanceEventRow;
+}
+
+export interface ResistanceOutcomeUpdate {
+  interventionSelected?: string;
+  started?: boolean;
+  completedFull?: boolean;
+  completedReduced?: boolean;
+  continuedPastMinimum?: boolean;
+  feltAfterward?: string;
+}
+
+export async function updateResistanceOutcome(
+  eventId: string,
+  userId: string,
+  update: ResistanceOutcomeUpdate,
+): Promise<void> {
+  const payload: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (update.interventionSelected !== undefined) payload.intervention_selected = update.interventionSelected;
+  if (update.started !== undefined) payload.started = update.started;
+  if (update.completedFull !== undefined) payload.completed_full = update.completedFull;
+  if (update.completedReduced !== undefined) payload.completed_reduced = update.completedReduced;
+  if (update.continuedPastMinimum !== undefined) payload.continued_past_minimum = update.continuedPastMinimum;
+  if (update.feltAfterward !== undefined) payload.felt_afterward = update.feltAfterward;
+
+  const { error } = await db
+    .from('camryn_challenge_resistance_events')
+    .update(payload)
+    .eq('id', eventId)
+    .eq('user_id', userId);
+  if (error) throw error;
+}

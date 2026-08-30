@@ -7,6 +7,7 @@
 
 import { addLocalDays, localToday } from './date';
 import { CHALLENGE_LIBRARY, DOMAIN_STYLE, type ChallengeContent, type ChallengeDomain } from './challenges';
+import { DEFAULT_INTERVENTIONS_BY_TYPE, type InterventionType, type ResistanceType } from './resistanceSupport';
 
 export interface StreakEvaluation {
   daysCompleted: number;
@@ -168,4 +169,92 @@ export function getFeaturedChallenges(
     }
     return { challenge, reason };
   });
+}
+
+// ── Resistance support (Food/Body challenges only) ────────────────────────
+
+export interface ResistanceEventSummary {
+  resistance_type: string;
+  intervention_selected: string | null;
+  completed_full: boolean | null;
+  completed_reduced: boolean | null;
+}
+
+// Roughly 28% of a challenge's total days/target, minimum 1 -- the hard cap
+// on how many Minimum Viable Win days one instance can use before that
+// option stops being offered. This is the concrete mechanism behind "don't
+// teach her that resistance makes challenges easier": reduction is a
+// limited resource per instance, not something that can be selected
+// indefinitely.
+export function getMvwCap(challenge: ChallengeContent): number {
+  const total = challenge.completion.type === 'streak'
+    ? challenge.completion.durationDays
+    : challenge.completion.type === 'cumulative'
+      ? challenge.completion.target
+      : 4;
+  return Math.max(1, Math.round(total * 0.28));
+}
+
+export function getMvwUsageCount(events: ResistanceEventSummary[]): number {
+  return events.filter((e) => e.completed_reduced === true).length;
+}
+
+export interface InterventionStat {
+  intervention: string;
+  attempts: number;
+  fullCompletionRate: number;
+}
+
+// Per-resistance-type success rate for each intervention, derived fresh
+// from the event log every time this is called -- never cached, same
+// principle as every other progress number in this system (streak counts,
+// cumulative totals). Cold start (no events for this type) returns [].
+export function getInterventionStats(events: ResistanceEventSummary[], resistanceType: string): InterventionStat[] {
+  const relevant = events.filter((e) => e.resistance_type === resistanceType && e.intervention_selected);
+  const byIntervention = new Map<string, { attempts: number; fullCompletions: number }>();
+  for (const e of relevant) {
+    const key = e.intervention_selected as string;
+    const entry = byIntervention.get(key) ?? { attempts: 0, fullCompletions: 0 };
+    entry.attempts += 1;
+    if (e.completed_full) entry.fullCompletions += 1;
+    byIntervention.set(key, entry);
+  }
+  return [...byIntervention.entries()]
+    .map(([intervention, { attempts, fullCompletions }]) => ({ intervention, attempts, fullCompletionRate: fullCompletions / attempts }))
+    .sort((a, b) => b.fullCompletionRate - a.fullCompletionRate || b.attempts - a.attempts);
+}
+
+// Combines the curated cold-start order (DEFAULT_INTERVENTIONS_BY_TYPE)
+// with learned stats: once an intervention has at least 2 recorded
+// attempts for this resistance type, its real full-completion rate leads;
+// anything without enough history falls back to the static default order.
+// Minimum Viable Win is dropped once mvwUsageCount reaches the challenge's
+// cap, with a backfill so at least 2 options are still offered.
+export function getRankedInterventions(
+  resistanceType: ResistanceType,
+  events: ResistanceEventSummary[],
+  mvwUsageCount: number,
+  mvwCap: number,
+): InterventionType[] {
+  const defaults = DEFAULT_INTERVENTIONS_BY_TYPE[resistanceType];
+  const stats = getInterventionStats(events, resistanceType).filter((s) => s.attempts >= 2);
+
+  let ranked: InterventionType[];
+  if (stats.length > 0) {
+    const learnedOrder = stats.map((s) => s.intervention as InterventionType);
+    const remaining = defaults.filter((d) => !learnedOrder.includes(d));
+    ranked = [...learnedOrder, ...remaining];
+  } else {
+    ranked = defaults;
+  }
+
+  if (mvwUsageCount >= mvwCap) {
+    ranked = ranked.filter((i) => i !== 'minimum-viable-win');
+    for (const fallback of ['start-with-me', 'push-me', 'remove-friction', 'choose-for-me'] as InterventionType[]) {
+      if (ranked.length >= 2) break;
+      if (!ranked.includes(fallback)) ranked.push(fallback);
+    }
+  }
+
+  return ranked;
 }
