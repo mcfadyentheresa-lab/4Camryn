@@ -174,7 +174,7 @@ export default function PeriodToggle({ userId, onPeriodStart }: PeriodToggleProp
             : 'Tap when your period starts, hold to backdate'
         }
       >
-        <svg width="16" height="18" viewBox="0 0 14 16" fill="none">
+        <svg width="14" height="16" viewBox="0 0 14 16" fill="none">
           <path
             d="M7 1C7 1 1.5 8.3 1.5 11.3C1.5 14.3 3.9 15.8 7 15.8C10.1 15.8 12.5 14.3 12.5 11.3C12.5 8.3 7 1 7 1Z"
             stroke="currentColor"
@@ -183,6 +183,7 @@ export default function PeriodToggle({ userId, onPeriodStart }: PeriodToggleProp
             fill={activeLogId ? 'currentColor' : 'none'}
           />
         </svg>
+        <span className="period-toggle-label">{activeLogId ? 'On period' : 'Log period'}</span>
       </button>
 
       {pickerOpen && (

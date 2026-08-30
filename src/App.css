@@ -382,14 +382,16 @@
 
 .period-toggle {
   flex-shrink: 0;
-  width: 32px;
-  height: 32px;
-  display: grid;
-  place-items: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 14px;
   border: 1px solid var(--line);
   background: var(--paper);
-  border-radius: 50%;
+  border-radius: var(--r);
   color: var(--muted);
+  font-size: 0.83rem;
+  font-weight: 600;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
@@ -1684,6 +1686,7 @@
   padding: 3px 10px;
   border-radius: 999px;
   margin-bottom: 12px;
+  margin-right: 10px;
 }
 
 .cycle-input-label {
@@ -5635,9 +5638,10 @@ button.camryn-orb:focus-visible .camryn-orb-sphere {
 }
 
 .food-cups-grid {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
   gap: 8px;
-  flex-wrap: wrap;
+  justify-items: center;
 }
 
 .food-cup-btn {
